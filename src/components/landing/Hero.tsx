@@ -131,7 +131,7 @@ export function Hero() {
               </span>
               <div>
                 <p className="text-sm font-semibold text-foreground">Aria</p>
-                <p className="text-xs text-secondary-foreground/70">
+                <p className="text-xs text-muted-foreground">
                   <span className="mr-1.5 inline-block size-1.5 rounded-full bg-success align-middle" />
                   Listening, always private
                 </p>
