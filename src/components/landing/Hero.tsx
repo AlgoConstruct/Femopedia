@@ -15,12 +15,12 @@ import { Blobs } from "@/components/landing/Blobs";
 import { Button } from "@/components/ui/button";
 
 const floatingCards = [
-  { icon: Heart, label: "Mood", value: "Balanced", tone: "text-primary", pos: "-left-6 top-6" },
-  { icon: Moon, label: "Sleep", value: "7h 20m", tone: "text-accent", pos: "-right-4 top-24" },
-  { icon: Waves, label: "Cycle", value: "Day 18 · Luteal", tone: "text-primary", pos: "-left-10 bottom-32" },
-  { icon: Droplets, label: "Hydration", value: "1.8 L", tone: "text-secondary-foreground", pos: "-right-8 bottom-40" },
-  { icon: Activity, label: "Energy", value: "Steady", tone: "text-primary", pos: "left-4 -bottom-6" },
-  { icon: Brain, label: "Stress", value: "Low", tone: "text-accent", pos: "right-10 -bottom-8" },
+  { icon: Heart, label: "Mood", value: "Balanced", tone: "text-primary", pos: "-left-14 -top-8 lg:-left-24" },
+  { icon: Moon, label: "Sleep", value: "7h 20m", tone: "text-accent", pos: "-right-10 -top-10 lg:-right-16" },
+  { icon: Waves, label: "Cycle", value: "Day 18 · Luteal", tone: "text-primary", pos: "-left-16 top-1/2 lg:-left-28" },
+  { icon: Droplets, label: "Hydration", value: "1.8 L", tone: "text-secondary-foreground", pos: "-right-12 top-2/3 lg:-right-20" },
+  { icon: Activity, label: "Energy", value: "Steady", tone: "text-primary", pos: "-left-10 -bottom-10 lg:-left-16" },
+  { icon: Brain, label: "Stress", value: "Low", tone: "text-accent", pos: "-right-6 -bottom-12 lg:-right-14" },
 ];
 
 export function Hero() {

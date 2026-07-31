@@ -68,13 +68,11 @@ export function JourneyTimeline() {
                   >
                     {stage.name}
                   </p>
-                  <motion.p
+                  <motion.span
                     initial={false}
-                    animate={{ opacity: active === i ? 1 : 0, y: active === i ? 0 : -6 }}
-                    className="mt-2 max-w-[9rem] text-center text-[0.7rem] leading-relaxed text-muted-foreground"
-                  >
-                    {stage.note}
-                  </motion.p>
+                    animate={{ opacity: active === i ? 1 : 0 }}
+                    className="mt-2 block h-1 w-6 rounded-full bg-primary"
+                  />
                 </li>
               ))}
             </ul>
