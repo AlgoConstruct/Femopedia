@@ -11,7 +11,6 @@ import {
   MessageCircle,
   NotebookPen,
   ShieldCheck,
-  Sparkles,
   Stethoscope,
   Users,
   X,
@@ -110,29 +109,7 @@ function FemopediaLanding() {
       </header>
 
       <main id="top">
-        <section className="hero shell">
-          <div className="hero-copy">
-            <div className="eyebrow"><Sparkles /> Living intelligence for women's health</div>
-            <h1>Your health changes.<br /><em>Your support should too.</em></h1>
-            <p>Femopedia brings trusted health education, thoughtful AI guidance, and lifelong support into one calm, connected place.</p>
-            <div className="hero-actions">
-              <a href="#early-access" className="primary-button">Join early access <ArrowRight /></a>
-              <a href="#why" className="text-link">Discover Femopedia <span>↓</span></a>
-            </div>
-            <div className="trust-line"><ShieldCheck /><span>Evidence-informed</span><i /> <span>Private by design</span><i /> <span>Never a diagnosis</span></div>
-          </div>
-          <div className="hero-visual">
-            <div className="photo-frame hero-photo">
-              <img src="https://images.unsplash.com/photo-1542385151-efd9000785a0?auto=format&fit=crop&w=1400&q=88" alt="A mother holding her baby in warm natural light" />
-            </div>
-            <div className="companion-card">
-              <div className="companion-top"><span><img src="/brand/mark.svg" alt="" />Femopedia AI</span><span className="online">Available</span></div>
-              <p>“Help me understand what may be happening, what matters next, and when I should seek care.”</p>
-              <div className="answer"><Sparkles /> I’ll help you work through it clearly, one step at a time.</div>
-            </div>
-            <div className="privacy-pill"><ShieldCheck /> Your questions stay yours</div>
-          </div>
-        </section>
+        <section className="liquid-section liquid-hero shell" aria-label="Femopedia—living intelligence for women's health"><LiquidGlass /></section>
 
         <section className="belief-strip" id="why">
           <div className="shell belief-grid">
@@ -180,8 +157,6 @@ function FemopediaLanding() {
             <PhoneMockupBasic />
           </div>
         </section>
-
-        <section className="liquid-section shell" aria-label="Explore Femopedia support"><LiquidGlass /></section>
 
         <section className="safety shell" id="safety">
           <div className="safety-card">
