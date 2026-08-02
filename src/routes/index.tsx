@@ -19,6 +19,7 @@ import {
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
 import PhoneMockupBasic from "@/components/ui/phone-mockups-1";
 import { StaggerTestimonials } from "@/components/ui/stagger-testimonials";
+import { FloatingChatWidget } from "@/components/ui/floating-chat-widget-shadcnui";
 
 const title = "Femopedia — Women's Health, Understood";
 const description =
@@ -196,6 +197,7 @@ function FemopediaLanding() {
         <div className="footer-links"><a href="#ecosystem">Ecosystem</a><a href="#safety">Safety</a><a href="#early-access">Early access</a><a href="mailto:hello@femopedia.com">Contact</a></div>
         <div className="footer-bottom"><span>© 2026 Femopedia</span><span>Educational support, never a replacement for professional medical care.</span></div>
       </footer>
+      <FloatingChatWidget />
     </div>
   );
 }
