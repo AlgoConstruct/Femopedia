@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
 import PhoneMockupBasic from "@/components/ui/phone-mockups-1";
+import { StaggerTestimonials } from "@/components/ui/stagger-testimonials";
 
 const title = "Femopedia — Women's Health, Understood";
 const description =
@@ -168,6 +169,11 @@ function FemopediaLanding() {
           <img src="/brand/mark.svg" alt="" className="quote-mark" />
           <blockquote>“Your body is not a problem to solve. Your questions are valid, and understanding should never feel out of reach.”</blockquote>
           <p>— The Femopedia promise</p>
+        </section>
+
+        <section className="perspectives-section" id="perspectives">
+          <div className="shell perspectives-heading"><p className="section-kicker">Designed around real needs</p><h2>Health guidance should<br /><em>feel more human.</em></h2><p>Illustrative perspectives shaped by recurring needs in women’s health conversations—not medical or product claims.</p></div>
+          <StaggerTestimonials />
         </section>
 
         <section className="faq shell">
