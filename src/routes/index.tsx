@@ -11,12 +11,12 @@ import {
   MessageCircle,
   NotebookPen,
   ShieldCheck,
+  Sparkles,
   Stethoscope,
   Users,
   X,
 } from "lucide-react";
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
-import CardFanCarousel from "@/components/ui/card-fan-carousel";
 import PhoneMockupBasic from "@/components/ui/phone-mockups-1";
 import { Component as LiquidGlass } from "@/components/ui/liquid-glass";
 
@@ -48,17 +48,6 @@ const ecosystem = [
 ];
 
 const stages = ["First changes", "Cycle health", "Everyday wellbeing", "Fertility", "Pregnancy", "Postpartum", "Parenting", "Midlife & beyond"];
-const lifeStageCards = [
-  { imgUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=700&h=1000&q=85", alt: "Young woman smiling in natural light", label: "Growing into yourself" },
-  { imgUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=700&h=1000&q=85", alt: "Woman feeling confident and well", label: "Everyday wellbeing" },
-  { imgUrl: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=700&h=1000&q=85", alt: "Woman enjoying a calm outdoor moment", label: "Knowing your body" },
-  { imgUrl: "https://images.unsplash.com/photo-1678739201887-34001155c5e0?auto=format&fit=crop&w=700&h=1000&q=85", alt: "Pregnant woman in peaceful natural light", label: "Pregnancy" },
-  { imgUrl: "https://images.unsplash.com/photo-1542385151-efd9000785a0?auto=format&fit=crop&w=700&h=1000&q=85", alt: "Mother holding her newborn baby", label: "Postpartum" },
-  { imgUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=700&h=1000&q=85", alt: "Woman smiling warmly", label: "Living with confidence" },
-  { imgUrl: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=700&h=1000&q=85", alt: "Woman in a quiet reflective moment", label: "Midlife wellbeing" },
-  { imgUrl: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=700&h=1000&q=85", alt: "Mature woman smiling", label: "Your next chapter" },
-];
-
 const questions = [
   ["Is Femopedia a medical service?", "No. Femopedia provides educational guidance and care navigation. It does not diagnose, prescribe, or replace a qualified healthcare professional."],
   ["How does the AI handle uncertainty?", "It separates established evidence from general guidance, explains when information is uncertain, and clearly highlights when professional or urgent care may be needed."],
@@ -109,7 +98,23 @@ function FemopediaLanding() {
       </header>
 
       <main id="top">
-        <section className="liquid-section liquid-hero shell" aria-label="Femopedia—living intelligence for women's health"><LiquidGlass /></section>
+        <section className="hero shell">
+          <div className="hero-copy">
+            <div className="eyebrow"><Sparkles /> Living intelligence for women's health</div>
+            <h1>Your health changes.<br /><em>Your support should too.</em></h1>
+            <p>Femopedia brings trusted health education, thoughtful AI guidance, and lifelong support into one calm, connected place.</p>
+            <div className="hero-actions">
+              <a href="#early-access" className="primary-button">Join early access <ArrowRight /></a>
+              <a href="#why" className="text-link">Discover Femopedia <span>↓</span></a>
+            </div>
+            <div className="trust-line"><ShieldCheck /><span>Evidence-informed</span><i /> <span>Private by design</span><i /> <span>Never a diagnosis</span></div>
+          </div>
+          <div className="hero-visual">
+            <div className="photo-frame hero-photo"><img src="https://images.unsplash.com/photo-1542385151-efd9000785a0?auto=format&fit=crop&w=1400&q=88" alt="A mother holding her baby in warm natural light" /></div>
+            <div className="companion-card"><div className="companion-top"><span><img src="/brand/mark.svg" alt="" />Femopedia AI</span><span className="online">Available</span></div><p>“Help me understand what may be happening, what matters next, and when I should seek care.”</p><div className="answer"><Sparkles /> I’ll help you work through it clearly, one step at a time.</div></div>
+            <div className="privacy-pill"><ShieldCheck /> Your questions stay yours</div>
+          </div>
+        </section>
 
         <section className="belief-strip" id="why">
           <div className="shell belief-grid">
@@ -134,11 +139,6 @@ function FemopediaLanding() {
           </div>
         </section>
 
-        <section className="life-stories" aria-labelledby="life-stories-title">
-          <div className="shell life-stories-heading"><p className="section-kicker">Many lives. One lifelong companion.</p><h2 id="life-stories-title">Made for the whole<br /><em>story of you.</em></h2><p>Health doesn’t happen in a straight line. Explore the moments Femopedia is being built to support.</p></div>
-          <CardFanCarousel cards={lifeStageCards} />
-        </section>
-
         <section className="stage-section" id="stages">
           <div className="shell stage-grid">
             <div className="stage-photo photo-frame"><img src="https://images.unsplash.com/photo-1678739201887-34001155c5e0?auto=format&fit=crop&w=1400&q=88" alt="Pregnant woman standing peacefully in natural light" /></div>
@@ -157,6 +157,8 @@ function FemopediaLanding() {
             <PhoneMockupBasic />
           </div>
         </section>
+
+        <section className="liquid-section shell" aria-label="Explore Femopedia support"><LiquidGlass /></section>
 
         <section className="safety shell" id="safety">
           <div className="safety-card">
