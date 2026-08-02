@@ -2,7 +2,9 @@ export function SiteFooter() {
   return (
     <footer className="footer shell">
       <div>
-        <img src="/brand/logo-primary.svg" alt="Femopedia" width="620" height="150" />
+        <a href="/" aria-label="Femopedia home">
+          <img src="/brand/logo-primary.svg" alt="Femopedia" width="620" height="150" />
+        </a>
         <p>Living intelligence for every stage of womanhood.</p>
       </div>
       <nav className="footer-links" aria-label="Footer navigation">

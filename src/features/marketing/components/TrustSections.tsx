@@ -50,16 +50,20 @@ export function FaqSection() {
       </div>
       <div className="faq-list">
         {faqs.map(({ question, answer }, index) => (
-          <button
-            type="button"
-            key={question}
-            onClick={() => setOpenFaq(openFaq === index ? -1 : index)}
-            aria-expanded={openFaq === index}
-          >
-            <span>{question}</span>
-            <ChevronDown className={openFaq === index ? "rotated" : ""} aria-hidden="true" />
-            {openFaq === index && <p>{answer}</p>}
-          </button>
+          <div className="faq-item" key={question}>
+            <button
+              type="button"
+              onClick={() => setOpenFaq(openFaq === index ? -1 : index)}
+              aria-expanded={openFaq === index}
+              aria-controls={`faq-answer-${index}`}
+            >
+              <span>{question}</span>
+              <ChevronDown className={openFaq === index ? "rotated" : ""} aria-hidden="true" />
+            </button>
+            <p id={`faq-answer-${index}`} hidden={openFaq !== index}>
+              {answer}
+            </p>
+          </div>
         ))}
       </div>
     </section>

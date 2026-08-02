@@ -1,4 +1,4 @@
-import { FloatingChatWidget } from "@/components/ui/floating-chat-widget-shadcnui";
+import { DeferredChatWidget } from "@/features/marketing/components/DeferredChatWidget";
 import {
   EcosystemSection,
   HeroSection,
@@ -20,7 +20,7 @@ export default function FemopediaLandingPage() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
       <SiteHeader />
-      <main id="top">
+      <main id="main-content" tabIndex={-1}>
         <HeroSection />
         <PrinciplesSection />
         <EcosystemSection />
@@ -33,7 +33,7 @@ export default function FemopediaLandingPage() {
         <WaitlistSection />
       </main>
       <SiteFooter />
-      <FloatingChatWidget />
+      <DeferredChatWidget />
     </div>
   );
 }

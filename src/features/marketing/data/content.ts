@@ -1,7 +1,7 @@
 export const SITE_URL = "https://femopedia.com";
 export const HOME_TITLE = "Femopedia | AI-Powered Women's Health Companion";
 export const HOME_DESCRIPTION =
-  "Understand women's health through every life stage with evidence-informed education, thoughtful AI guidance, pregnancy and postpartum support, and clear care navigation.";
+  "Evidence-informed women's health education, AI guidance, pregnancy and postpartum support, and care navigation through every stage of life.";
 
 export const ecosystem = [
   {

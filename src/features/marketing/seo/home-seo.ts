@@ -5,12 +5,13 @@ export const homeMeta = [
   { name: "description", content: HOME_DESCRIPTION },
   { name: "author", content: "Femopedia" },
   { name: "application-name", content: "Femopedia" },
+  { name: "color-scheme", content: "light dark" },
+  { name: "format-detection", content: "telephone=no" },
   {
     name: "robots",
     content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
   },
-  { name: "theme-color", content: "#FAFBFA", media: "(prefers-color-scheme: light)" },
-  { name: "theme-color", content: "#101620", media: "(prefers-color-scheme: dark)" },
+  { name: "theme-color", content: "#FAFBFA" },
   { property: "og:type", content: "website" },
   { property: "og:site_name", content: "Femopedia" },
   { property: "og:locale", content: "en_US" },
@@ -18,6 +19,8 @@ export const homeMeta = [
   { property: "og:title", content: HOME_TITLE },
   { property: "og:description", content: HOME_DESCRIPTION },
   { property: "og:image", content: `${SITE_URL}/brand/social-card.png` },
+  { property: "og:image:secure_url", content: `${SITE_URL}/brand/social-card.png` },
+  { property: "og:image:type", content: "image/png" },
   { property: "og:image:width", content: "1200" },
   { property: "og:image:height", content: "630" },
   {
@@ -28,14 +31,13 @@ export const homeMeta = [
   { name: "twitter:title", content: HOME_TITLE },
   { name: "twitter:description", content: HOME_DESCRIPTION },
   { name: "twitter:image", content: `${SITE_URL}/brand/social-card.png` },
+  {
+    name: "twitter:image:alt",
+    content: "Femopedia—living intelligence for every stage of womanhood",
+  },
 ];
 
-export const homeLinks = [
-  { rel: "canonical", href: `${SITE_URL}/` },
-  { rel: "manifest", href: "/brand/site.webmanifest" },
-  { rel: "apple-touch-icon", href: "/brand/apple-touch-icon.png", sizes: "180x180" },
-  { rel: "preconnect", href: "https://images.unsplash.com" },
-];
+export const homeLinks = [{ rel: "canonical", href: `${SITE_URL}/` }];
 
 export const homeStructuredData = {
   "@context": "https://schema.org",
@@ -53,6 +55,18 @@ export const homeStructuredData = {
       },
       description: HOME_DESCRIPTION,
       email: "hello@femopedia.com",
+      contactPoint: {
+        "@type": "ContactPoint",
+        contactType: "customer support",
+        email: "hello@femopedia.com",
+        availableLanguage: "English",
+      },
+      knowsAbout: [
+        "Women's health education",
+        "Pregnancy and postpartum support",
+        "Health literacy",
+        "Care navigation",
+      ],
     },
     {
       "@type": "WebSite",
@@ -71,6 +85,7 @@ export const homeStructuredData = {
       description: HOME_DESCRIPTION,
       isPartOf: { "@id": `${SITE_URL}/#website` },
       about: { "@id": `${SITE_URL}/#organization` },
+      hasPart: { "@id": `${SITE_URL}/#faq` },
       primaryImageOfPage: { "@type": "ImageObject", url: `${SITE_URL}/brand/social-card.png` },
       inLanguage: "en",
     },

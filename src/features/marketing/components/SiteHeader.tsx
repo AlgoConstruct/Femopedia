@@ -25,11 +25,11 @@ export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   return (
     <header className="site-header">
-      <nav className="shell nav-wrap" aria-label="Main navigation">
-        <a href="#top" className="brand" aria-label="Femopedia home">
+      <div className="shell nav-wrap">
+        <a href="/" className="brand" aria-label="Femopedia home">
           <img src="/brand/logo-primary.svg" alt="Femopedia" width="620" height="150" />
         </a>
-        <NavigationMenu className="desktop-nav" viewport={false}>
+        <NavigationMenu className="desktop-nav" viewport={false} aria-label="Primary navigation">
           <NavigationMenuList>
             <NavigationMenuItem>
               <NavigationMenuLink href="#why" className={navigationMenuTriggerStyle()}>
@@ -125,9 +125,9 @@ export function SiteHeader() {
         >
           {menuOpen ? <X /> : <Menu />}
         </button>
-      </nav>
+      </div>
       {menuOpen && (
-        <div id="mobile-navigation" className="mobile-nav">
+        <nav id="mobile-navigation" className="mobile-nav" aria-label="Mobile navigation">
           <a href="#why" onClick={() => setMenuOpen(false)}>
             Why Femopedia
           </a>
@@ -152,7 +152,7 @@ export function SiteHeader() {
           <a href="#early-access" onClick={() => setMenuOpen(false)}>
             Join early access
           </a>
-        </div>
+        </nav>
       )}
     </header>
   );

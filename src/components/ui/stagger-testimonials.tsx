@@ -15,56 +15,49 @@ const testimonials: Testimonial[] = [
     testimonial:
       "I want health information that explains what is known, what is uncertain, and what I can do next.",
     by: "Maya, navigating cycle changes",
-    imgSrc:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=240&h=280&q=85",
+    imgSrc: "/images/perspectives/maya.webp",
   },
   {
     id: 1,
     testimonial:
       "Sometimes I need context before I decide whether a symptom is worth bringing to my doctor.",
     by: "Nina, working professional",
-    imgSrc:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=240&h=280&q=85",
+    imgSrc: "/images/perspectives/nina.webp",
   },
   {
     id: 2,
     testimonial:
       "Pregnancy advice is everywhere. I want one calm place that helps me separate evidence from noise.",
     by: "Leah, expecting her first baby",
-    imgSrc:
-      "https://images.unsplash.com/photo-1678739201887-34001155c5e0?auto=format&fit=crop&w=240&h=280&q=85",
+    imgSrc: "/images/perspectives/leah.webp",
   },
   {
     id: 3,
     testimonial:
       "After birth, everyone asked about the baby. I needed someone to ask how I was recovering too.",
     by: "Amara, new mother",
-    imgSrc:
-      "https://images.unsplash.com/photo-1542385151-efd9000785a0?auto=format&fit=crop&w=240&h=280&q=85",
+    imgSrc: "/images/perspectives/amara.webp",
   },
   {
     id: 4,
     testimonial:
       "I do not want another app that turns my body into streaks, scores, and reminders I can fail.",
     by: "Sofia, living with PCOS",
-    imgSrc:
-      "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=240&h=280&q=85",
+    imgSrc: "/images/perspectives/sofia.webp",
   },
   {
     id: 5,
     testimonial:
       "My health history should feel like one continuous story, not scattered notes I have to reconstruct.",
     by: "Priya, caregiver and parent",
-    imgSrc:
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=240&h=280&q=85",
+    imgSrc: "/images/perspectives/priya.webp",
   },
   {
     id: 6,
     testimonial:
       "Midlife came with questions I was never prepared to ask. Clear language would have changed everything.",
     by: "Elena, navigating perimenopause",
-    imgSrc:
-      "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=240&h=280&q=85",
+    imgSrc: "/images/perspectives/elena.webp",
   },
 ];
 
@@ -97,7 +90,7 @@ function TestimonialCard({ position, testimonial, handleMove, cardSize }: Testim
         loading="lazy"
         decoding="async"
       />
-      <h3>“{testimonial.testimonial}”</h3>
+      <blockquote>“{testimonial.testimonial}”</blockquote>
       <p>— {testimonial.by}</p>
     </article>
   );

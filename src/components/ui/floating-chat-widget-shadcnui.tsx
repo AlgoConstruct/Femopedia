@@ -79,8 +79,8 @@ const containerVariants: Variants = {
   exit: { opacity: 0, y: 15, scale: 0.97, transition: { duration: 0.18 } },
 };
 
-export function FloatingChatWidget() {
-  const [isOpen, setIsOpen] = useState(false);
+export function FloatingChatWidget({ initialOpen = false }: { initialOpen?: boolean }) {
+  const [isOpen, setIsOpen] = useState(initialOpen);
   const [selectedMode, setSelectedMode] = useState(GUIDE_MODES[0].id);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);

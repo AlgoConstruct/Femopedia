@@ -59,11 +59,12 @@ export function HeroSection() {
       <div className="hero-visual">
         <div className="photo-frame hero-photo">
           <img
-            src="https://images.unsplash.com/photo-1542385151-efd9000785a0?auto=format&fit=crop&w=1400&q=88"
+            src="/images/hero-mother-baby.webp"
             alt="A mother holding her baby in warm natural light"
             width="1400"
             height="1000"
             fetchPriority="high"
+            decoding="async"
           />
         </div>
         <div className="companion-card">
@@ -183,11 +184,12 @@ export function LifeStagesSection() {
       <div className="shell stage-grid">
         <div className="stage-photo photo-frame">
           <img
-            src="https://images.unsplash.com/photo-1678739201887-34001155c5e0?auto=format&fit=crop&w=1400&q=88"
+            src="/images/life-stage-pregnancy.webp"
             alt="Pregnant woman standing peacefully in natural light"
             width="1400"
             height="1800"
             loading="lazy"
+            decoding="async"
           />
         </div>
         <div className="stage-content">
