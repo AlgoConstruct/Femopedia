@@ -1,0 +1,16 @@
+# Femopedia
+
+> Femopedia is an AI-powered women's health education and guidance ecosystem designed to support people through changing life stages.
+
+- Canonical website: https://femopedia.com/
+- Contact: hello@femopedia.com
+- Primary topics: women's health education, pregnancy, postpartum, parenting, care navigation, health journaling, and AI-supported guidance
+- Audience: people seeking calm, evidence-informed women's health education and life-stage support
+
+## Medical boundary
+
+Femopedia provides educational information and care-navigation support. It does not diagnose, prescribe, provide emergency services, or replace qualified healthcare professionals.
+
+## Editorial principles
+
+Content should explain uncertainty, distinguish education from medical advice, encourage professional care when appropriate, and communicate with compassion and inclusive language.

@@ -12,3 +12,6 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://femopedia.com/sitemap.xml
+Host: https://femopedia.com
