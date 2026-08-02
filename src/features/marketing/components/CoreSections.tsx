@@ -156,7 +156,11 @@ export function EcosystemSection() {
         {ecosystem.map((item, index) => {
           const Icon = icons[item.id];
           return (
-            <article className={index === 0 ? "featured" : ""} key={item.id}>
+            <article
+              id={`ecosystem-${item.id}`}
+              className={index === 0 ? "featured" : ""}
+              key={item.id}
+            >
               <div className="card-icon">
                 <Icon />
               </div>

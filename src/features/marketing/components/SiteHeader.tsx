@@ -5,7 +5,9 @@ import {
   HeartHandshake,
   Menu,
   MessageCircle,
+  NotebookPen,
   Stethoscope,
+  Users,
   X,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/landing/ThemeToggle";
@@ -47,32 +49,46 @@ export function SiteHeader() {
                     <ArrowRight />
                   </a>
                   <div className="nav-grid">
-                    <NavigationMenuLink href="#ecosystem">
+                    <NavigationMenuLink href="#ecosystem-ai">
                       <MessageCircle />
                       <span>
                         <strong>Femopedia AI</strong>
                         <small>Compassionate guidance</small>
                       </span>
                     </NavigationMenuLink>
-                    <NavigationMenuLink href="#ecosystem">
+                    <NavigationMenuLink href="#ecosystem-care">
                       <Stethoscope />
                       <span>
                         <strong>Care</strong>
                         <small>Prepare and navigate care</small>
                       </span>
                     </NavigationMenuLink>
-                    <NavigationMenuLink href="#stages">
+                    <NavigationMenuLink href="#ecosystem-pregnancy">
                       <HeartHandshake />
                       <span>
                         <strong>Pregnancy</strong>
                         <small>Every-trimester support</small>
                       </span>
                     </NavigationMenuLink>
-                    <NavigationMenuLink href="#stages">
+                    <NavigationMenuLink href="#ecosystem-baby">
                       <Baby />
                       <span>
                         <strong>Baby</strong>
                         <small>Postpartum and parenting</small>
+                      </span>
+                    </NavigationMenuLink>
+                    <NavigationMenuLink href="#ecosystem-journal">
+                      <NotebookPen />
+                      <span>
+                        <strong>Journal</strong>
+                        <small>Private health timeline</small>
+                      </span>
+                    </NavigationMenuLink>
+                    <NavigationMenuLink href="#ecosystem-community">
+                      <Users />
+                      <span>
+                        <strong>Community</strong>
+                        <small>Moderated conversations</small>
                       </span>
                     </NavigationMenuLink>
                   </div>
@@ -80,27 +96,14 @@ export function SiteHeader() {
               </NavigationMenuContent>
             </NavigationMenuItem>
             <NavigationMenuItem>
-              <NavigationMenuTrigger>Life stages</NavigationMenuTrigger>
-              <NavigationMenuContent>
-                <div className="nav-panel stages-panel">
-                  <p>Support for where you are now</p>
-                  <div>
-                    {[
-                      "Cycle health",
-                      "Everyday wellbeing",
-                      "Fertility",
-                      "Pregnancy",
-                      "Postpartum",
-                      "Midlife & beyond",
-                    ].map((item) => (
-                      <NavigationMenuLink href="#stages" key={item}>
-                        <span>{item}</span>
-                        <ArrowRight />
-                      </NavigationMenuLink>
-                    ))}
-                  </div>
-                </div>
-              </NavigationMenuContent>
+              <NavigationMenuLink href="#stages" className={navigationMenuTriggerStyle()}>
+                Life stages
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <NavigationMenuLink href="#companion" className={navigationMenuTriggerStyle()}>
+                AI companion
+              </NavigationMenuLink>
             </NavigationMenuItem>
             <NavigationMenuItem>
               <NavigationMenuLink href="#safety" className={navigationMenuTriggerStyle()}>
@@ -134,8 +137,17 @@ export function SiteHeader() {
           <a href="#stages" onClick={() => setMenuOpen(false)}>
             Life stages
           </a>
+          <a href="#companion" onClick={() => setMenuOpen(false)}>
+            AI companion
+          </a>
           <a href="#safety" onClick={() => setMenuOpen(false)}>
             Our approach
+          </a>
+          <a href="#perspectives" onClick={() => setMenuOpen(false)}>
+            Perspectives
+          </a>
+          <a href="#faq" onClick={() => setMenuOpen(false)}>
+            FAQ
           </a>
           <a href="#early-access" onClick={() => setMenuOpen(false)}>
             Join early access
