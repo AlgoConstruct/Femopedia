@@ -1,0 +1,12 @@
+{
+  "name": "Femopedia",
+  "short_name": "Femopedia",
+  "description": "Your AI Companion Through Every Stage of Womanhood.",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "theme_color": "#718C7B",
+  "background_color": "#FAFBFA",
+  "display": "standalone"
+}

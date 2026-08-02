@@ -1,0 +1,9 @@
+:root {
+  --femopedia-ink: #17233f;
+  --femopedia-primary: #718c7b;
+  --femopedia-primary-soft: #b9c9be;
+  --femopedia-accent: #7774ae;
+  --femopedia-background: #fafbfa;
+  --femopedia-surface: #e7eee9;
+  --femopedia-border: #d2ddd5;
+}

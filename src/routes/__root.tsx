@@ -78,18 +78,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Aria — AI Companion for Women's Health" },
+      { title: "Femopedia — Women's Health, Understood" },
       {
         name: "description",
         content:
-          "An AI companion supporting women's physical, emotional and mental wellbeing at every stage of life.",
+          "A trusted, AI-powered companion for women's health education, life-stage guidance, and care navigation.",
       },
-      { name: "author", content: "Aria Health" },
-      { property: "og:title", content: "Aria — AI Companion for Women's Health" },
+      { name: "author", content: "Femopedia" },
+      { property: "og:title", content: "Femopedia — Women's Health, Understood" },
       {
         property: "og:description",
         content:
-          "An AI companion supporting women's physical, emotional and mental wellbeing at every stage of life.",
+          "A trusted, AI-powered companion for women's health education, life-stage guidance, and care navigation.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -99,13 +99,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Manrope:wght@400;500;600;700;800&display=swap",
       },
       {
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "icon", href: "/brand/favicon.svg", type: "image/svg+xml" },
     ],
   }),
   shellComponent: RootShell,
