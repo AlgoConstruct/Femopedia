@@ -20,6 +20,7 @@ import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMe
 import PhoneMockupBasic from "@/components/ui/phone-mockups-1";
 import { StaggerTestimonials } from "@/components/ui/stagger-testimonials";
 import { FloatingChatWidget } from "@/components/ui/floating-chat-widget-shadcnui";
+import { ThemeToggle } from "@/components/landing/ThemeToggle";
 
 const title = "Femopedia — Women's Health, Understood";
 const description =
@@ -90,6 +91,7 @@ function FemopediaLanding() {
               <NavigationMenuItem><NavigationMenuLink href="#safety" className={navigationMenuTriggerStyle()}>Our approach</NavigationMenuLink></NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>
+          <ThemeToggle />
           <a href="#early-access" className="nav-cta">Join early access <ArrowRight /></a>
           <button className="menu-button" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-label="Toggle menu">
             {menuOpen ? <X /> : <Menu />}

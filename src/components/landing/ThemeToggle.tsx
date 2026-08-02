@@ -7,7 +7,7 @@ export function ThemeToggle() {
   const [dark, setDark] = useState(false);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem("aria-theme");
+    const stored = window.localStorage.getItem("femopedia-theme");
     const prefers = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const next = stored ? stored === "dark" : prefers;
     setDark(next);
@@ -18,7 +18,7 @@ export function ThemeToggle() {
     const next = !dark;
     setDark(next);
     document.documentElement.classList.toggle("dark", next);
-    window.localStorage.setItem("aria-theme", next ? "dark" : "light");
+    window.localStorage.setItem("femopedia-theme", next ? "dark" : "light");
   };
 
   return (
@@ -29,7 +29,7 @@ export function ThemeToggle() {
       aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
       className="rounded-full text-muted-foreground hover:text-foreground"
     >
-      {dark ? <Moon /> : <Sun />}
+      {dark ? <Sun /> : <Moon />}
     </Button>
   );
 }
