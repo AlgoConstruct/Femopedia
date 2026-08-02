@@ -12,6 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import PhoneMockupBasic from "@/components/ui/phone-mockups-1";
+import { CommunityVoicePreview } from "@/features/marketing/components/CommunityVoicePreview";
 import { ecosystem, lifeStages } from "@/features/marketing/data/content";
 
 const icons = {
@@ -169,6 +170,7 @@ export function EcosystemSection() {
                 <h3>{item.name}</h3>
                 <p>{item.text}</p>
               </div>
+              {item.id === "community" ? <CommunityVoicePreview /> : null}
               <ArrowRight className="card-arrow" aria-hidden="true" />
             </article>
           );
