@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
+import CardFanCarousel from "@/components/ui/card-fan-carousel";
 
 const title = "Femopedia — Women's Health, Understood";
 const description =
@@ -46,6 +47,16 @@ const ecosystem = [
 ];
 
 const stages = ["First changes", "Cycle health", "Everyday wellbeing", "Fertility", "Pregnancy", "Postpartum", "Parenting", "Midlife & beyond"];
+const lifeStageCards = [
+  { imgUrl: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=700&h=1000&q=85", alt: "Young woman smiling in natural light", label: "Growing into yourself" },
+  { imgUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=700&h=1000&q=85", alt: "Woman feeling confident and well", label: "Everyday wellbeing" },
+  { imgUrl: "https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=700&h=1000&q=85", alt: "Woman enjoying a calm outdoor moment", label: "Knowing your body" },
+  { imgUrl: "https://images.unsplash.com/photo-1678739201887-34001155c5e0?auto=format&fit=crop&w=700&h=1000&q=85", alt: "Pregnant woman in peaceful natural light", label: "Pregnancy" },
+  { imgUrl: "https://images.unsplash.com/photo-1542385151-efd9000785a0?auto=format&fit=crop&w=700&h=1000&q=85", alt: "Mother holding her newborn baby", label: "Postpartum" },
+  { imgUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=700&h=1000&q=85", alt: "Woman smiling warmly", label: "Living with confidence" },
+  { imgUrl: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=700&h=1000&q=85", alt: "Woman in a quiet reflective moment", label: "Midlife wellbeing" },
+  { imgUrl: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=700&h=1000&q=85", alt: "Mature woman smiling", label: "Your next chapter" },
+];
 
 const questions = [
   ["Is Femopedia a medical service?", "No. Femopedia provides educational guidance and care navigation. It does not diagnose, prescribe, or replace a qualified healthcare professional."],
@@ -142,6 +153,11 @@ function FemopediaLanding() {
           <div className="ecosystem-grid">
             {ecosystem.map((item, index) => <article className={index === 0 ? "featured" : ""} key={item.name}><div className="card-icon"><item.icon /></div><div><h3>{item.name}</h3><p>{item.text}</p></div><ArrowRight className="card-arrow" /></article>)}
           </div>
+        </section>
+
+        <section className="life-stories" aria-labelledby="life-stories-title">
+          <div className="shell life-stories-heading"><p className="section-kicker">Many lives. One lifelong companion.</p><h2 id="life-stories-title">Made for the whole<br /><em>story of you.</em></h2><p>Health doesn’t happen in a straight line. Explore the moments Femopedia is being built to support.</p></div>
+          <CardFanCarousel cards={lifeStageCards} />
         </section>
 
         <section className="stage-section" id="stages">
