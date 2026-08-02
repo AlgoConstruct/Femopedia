@@ -8,8 +8,7 @@ export function ThemeToggle() {
 
   useEffect(() => {
     const stored = window.localStorage.getItem("femopedia-theme");
-    const prefers = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const next = stored ? stored === "dark" : prefers;
+    const next = stored === "dark";
     setDark(next);
     document.documentElement.classList.toggle("dark", next);
   }, []);
