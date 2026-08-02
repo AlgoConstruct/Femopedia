@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
 import CardFanCarousel from "@/components/ui/card-fan-carousel";
+import PhoneMockupBasic from "@/components/ui/phone-mockups-1";
 
 const title = "Femopedia — Women's Health, Understood";
 const description =
@@ -169,6 +170,13 @@ function FemopediaLanding() {
               <p>From first questions about your body to pregnancy, parenting, midlife, and everything that does not fit neatly into a label.</p>
               <div className="stage-list">{stages.map((stage, i) => <div key={stage}><span>{String(i + 1).padStart(2, "0")}</span>{stage}<Check /></div>)}</div>
             </div>
+          </div>
+        </section>
+
+        <section className="product-preview" id="companion">
+          <div className="shell product-preview-grid">
+            <div className="product-preview-copy"><p className="section-kicker">A companion in your pocket</p><h2>Thoughtful support,<br /><em>beautifully simple.</em></h2><p>Femopedia brings complex health context into a calm, personal experience—ready when questions appear and quiet when you do not need it.</p><div className="preview-points"><span><Check /> Context that carries across life stages</span><span><Check /> Calm explanations in plain language</span><span><Check /> Private reflections under your control</span></div><a href="#early-access" className="primary-button">See what’s coming <ArrowRight /></a></div>
+            <PhoneMockupBasic />
           </div>
         </section>
 
