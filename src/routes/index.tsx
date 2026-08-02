@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import { NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuLink, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
 import PhoneMockupBasic from "@/components/ui/phone-mockups-1";
-import { Component as LiquidGlass } from "@/components/ui/liquid-glass";
 
 const title = "Femopedia — Women's Health, Understood";
 const description =
@@ -157,8 +156,6 @@ function FemopediaLanding() {
             <PhoneMockupBasic />
           </div>
         </section>
-
-        <section className="liquid-section shell" aria-label="Explore Femopedia support"><LiquidGlass /></section>
 
         <section className="safety shell" id="safety">
           <div className="safety-card">
