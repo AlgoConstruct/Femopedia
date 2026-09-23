@@ -37,3 +37,14 @@ def test_create_device_returns_token_once_and_stores_only_the_hash():
 def test_device_is_authenticated_property():
     device = Device.objects.create(token_hash=hash_device_token("x"))
     assert device.is_authenticated is True
+
+
+@pytest.mark.django_db
+def test_create_device_with_non_dict_json_body_falls_back_to_default_locale():
+    client = Client()
+    response = client.post("/api/devices/", data=[1, 2, 3], content_type="application/json")
+
+    assert response.status_code == 201
+    body = response.json()
+    device = Device.objects.get(id=body["device_id"])
+    assert device.locale == "ne"

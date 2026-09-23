@@ -12,7 +12,7 @@ def create_device(request):
     raw_token = generate_device_token()
     device = Device.objects.create(
         token_hash=hash_device_token(raw_token),
-        locale=request.data.get("locale", "ne") if request.data else "ne",
+        locale=request.data.get("locale", "ne") if isinstance(request.data, dict) else "ne",
     )
     return Response(
         {"device_id": str(device.id), "device_token": raw_token},
