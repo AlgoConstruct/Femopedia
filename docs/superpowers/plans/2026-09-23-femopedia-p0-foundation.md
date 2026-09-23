@@ -85,6 +85,7 @@ media/
 .pytest_cache/
 .ruff_cache/
 node_modules/
+.superpowers/
 ```
 
 - [ ] **Step 5: Write the root `README.md`**
