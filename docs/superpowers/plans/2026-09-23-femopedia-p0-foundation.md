@@ -594,7 +594,25 @@ docker run --rm quay.io/skopeo/stable list-tags docker://docker.io/chromadb/chro
 
 - [ ] **Step 5: Point tests at Postgres**
 
-Replace `backend/conftest.py` with:
+Task 2 established that pytest-django force-loads Django settings during
+`pytest_load_initial_conftests`, before any `conftest.py` is imported, so the
+authoritative place for test environment variables is the `env` block in
+`backend/pyproject.toml`, supplied by the `pytest-env` plugin. `conftest.py`
+is a redundant safety net kept in sync with it.
+
+Replace the `env` list inside `[tool.pytest.ini_options]` in
+`backend/pyproject.toml` with:
+
+```toml
+env = [
+    "DJANGO_SECRET_KEY=test-only-not-a-real-secret",
+    "DJANGO_DEBUG=True",
+    "DATABASE_URL=postgres://femopedia:femopedia@localhost:5432/femopedia",
+    "NEO4J_PASSWORD=femopedia-dev-password",
+]
+```
+
+Replace `backend/conftest.py` with the matching values:
 
 ```python
 import os
@@ -628,7 +646,7 @@ uv run python -c "from django.core.management.utils import get_random_secret_key
 
 ```bash
 cd /Users/aayush/Documents/AlgoConstruct/Femopedia
-git add docker-compose.yml backend/conftest.py backend/tests/ && git commit -m "feat: docker compose services, tests run on postgres"
+git add docker-compose.yml backend/conftest.py backend/pyproject.toml backend/tests/ && git commit -m "feat: docker compose services, tests run on postgres"
 ```
 
 ---
