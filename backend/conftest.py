@@ -9,4 +9,7 @@ import os
 # pyproject.toml as well, or it will silently have no effect.
 os.environ.setdefault("DJANGO_SECRET_KEY", "test-only-not-a-real-secret")
 os.environ.setdefault("DJANGO_DEBUG", "True")
-os.environ.setdefault("DATABASE_URL", "sqlite:///test-db.sqlite3")
+os.environ.setdefault(
+    "DATABASE_URL", "postgres://femopedia:femopedia@localhost:5432/femopedia"
+)
+os.environ.setdefault("NEO4J_PASSWORD", "femopedia-dev-password")

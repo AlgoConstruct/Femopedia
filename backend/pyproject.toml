@@ -30,7 +30,8 @@ markers = ["integration: requires docker compose services to be running"]
 env = [
     "DJANGO_SECRET_KEY=test-only-not-a-real-secret",
     "DJANGO_DEBUG=True",
-    "DATABASE_URL=sqlite:///test-db.sqlite3",
+    "DATABASE_URL=postgres://femopedia:femopedia@localhost:5432/femopedia",
+    "NEO4J_PASSWORD=femopedia-dev-password",
 ]
 
 [tool.ruff]
