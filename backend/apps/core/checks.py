@@ -1,3 +1,12 @@
+"""Reachability probes for the four datastores backing Femopedia.
+
+Each check reports reachability as a boolean, never as an exception: this
+module backs the deep health endpoint, whose entire purpose is to name which
+service is unreachable. A probe that raised would take down that endpoint
+along with it, so every check below catches broadly and returns False rather
+than propagating.
+"""
+
 import httpx
 import redis
 from django.conf import settings
