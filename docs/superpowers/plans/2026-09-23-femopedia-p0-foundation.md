@@ -548,7 +548,12 @@ services:
     volumes:
       - chromadata:/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/api/v2/heartbeat || exit 1"]
+      # The chroma image ships no curl, wget, nc or python3. bash is present,
+      # so its /dev/tcp pseudo-device is the probe available to us. Exec form,
+      # so no outer shell mangles the redirect. This proves the port accepts
+      # connections; the HTTP heartbeat is exercised by Task 6's deep health
+      # check, which calls /api/v2/heartbeat from Django.
+      test: ["CMD", "bash", "-c", ":> /dev/tcp/127.0.0.1/8000"]
       interval: 10s
       timeout: 5s
       retries: 10
