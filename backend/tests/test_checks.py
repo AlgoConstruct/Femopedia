@@ -7,6 +7,9 @@ from apps.core import checks
 
 
 def test_each_check_returns_false_when_the_backend_raises():
+    with mock.patch("apps.core.checks.connection.cursor", side_effect=OSError("down")):
+        assert checks.check_postgres() is False
+
     with mock.patch("apps.core.checks.redis.Redis.from_url", side_effect=OSError("down")):
         assert checks.check_redis() is False
 
@@ -15,6 +18,14 @@ def test_each_check_returns_false_when_the_backend_raises():
 
     with mock.patch("apps.core.checks.GraphDatabase.driver", side_effect=OSError("down")):
         assert checks.check_neo4j() is False
+
+
+def test_check_neo4j_closes_the_driver_when_verify_connectivity_raises():
+    mock_driver = mock.MagicMock()
+    mock_driver.verify_connectivity.side_effect = OSError("down")
+    with mock.patch("apps.core.checks.GraphDatabase.driver", return_value=mock_driver):
+        assert checks.check_neo4j() is False
+    mock_driver.close.assert_called_once()
 
 
 @pytest.mark.django_db

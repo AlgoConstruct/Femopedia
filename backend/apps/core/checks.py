@@ -15,10 +15,19 @@ from neo4j import GraphDatabase
 
 
 def check_postgres() -> bool:
+    # Django runs without an explicit transaction here (no ATOMIC_REQUESTS),
+    # so each cursor.execute() is its own implicit transaction and `SET
+    # LOCAL` would be reset before the next statement runs. Plain `SET` is
+    # session-scoped, so it is explicitly reset in the finally block to
+    # avoid changing the connection's behaviour beyond this probe.
     try:
         with connection.cursor() as cursor:
-            cursor.execute("SELECT 1")
-            return cursor.fetchone() == (1,)
+            cursor.execute("SET statement_timeout = '2s'")
+            try:
+                cursor.execute("SELECT 1")
+                return cursor.fetchone() == (1,)
+            finally:
+                cursor.execute("SET statement_timeout = 0")
     except Exception:
         return False
 
@@ -46,9 +55,11 @@ def check_neo4j() -> bool:
             auth=(settings.NEO4J_USER, settings.NEO4J_PASSWORD),
             connection_timeout=2,
         )
-        driver.verify_connectivity()
-        driver.close()
-        return True
+        try:
+            driver.verify_connectivity()
+            return True
+        finally:
+            driver.close()
     except Exception:
         return False
 
