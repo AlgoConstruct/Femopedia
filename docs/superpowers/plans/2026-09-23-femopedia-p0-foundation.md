@@ -145,6 +145,21 @@ ls docs/superpowers/specs docs/superpowers/plans
 
 Expected: both directories list their markdown files.
 
+- [ ] **Step 9: Reconfigure the Vercel project for the new root**
+
+The repository root moved, so Vercel is now building the wrong directory. In the Vercel dashboard for this project, under Settings:
+
+1. **General → Root Directory**: set to `frontend`.
+2. **Git → Ignored Build Step**: set to
+
+```bash
+git diff --quiet HEAD^ HEAD -- frontend/
+```
+
+Exit code 0 skips the build, so backend-only commits no longer trigger a frontend deploy.
+
+Verify by pushing a backend-only commit later in this plan and confirming Vercel reports the build as skipped.
+
 ---
 
 ### Task 2: Django project skeleton with a health endpoint
@@ -1352,6 +1367,7 @@ Expected: the workflow completes successfully. A failure here is a real failure 
 - `GET /api/health/deep/` reports each datastore individually and returns 503 when any is down.
 - CI is green on `design/v1-anonymous-ai-qa`.
 - The repository root is `Femopedia/`, with `frontend/`, `backend/`, and `docs/` as siblings.
+- Vercel builds from Root Directory `frontend` and skips backend-only commits.
 
 ## What P0 deliberately does not do
 
