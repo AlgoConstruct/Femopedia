@@ -26,6 +26,12 @@ jobs:
           --health-timeout 3s
           --health-retries 10
 
+    # DJANGO_SECRET_KEY and NEO4J_PASSWORD below are overridden by pytest-env
+    # from backend/pyproject.toml's [tool.pytest.ini_options] env list during
+    # the pytest step (pytest-env's hook runs tryfirst, before Django settings
+    # load), so they take effect only for a step that runs Django outside
+    # pytest (e.g. manage.py, a migration check, a Docker build smoke test).
+    # conftest.py documents the equivalent for its own inert fallback values.
     env:
       DJANGO_SECRET_KEY: ci-only-not-a-real-secret
       DJANGO_DEBUG: "True"
