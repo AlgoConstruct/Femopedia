@@ -4,4 +4,5 @@ from apps.core import views
 
 urlpatterns = [
     path("health/", views.health, name="health"),
+    path("whoami/", views.whoami, name="whoami"),
 ]

@@ -53,8 +53,12 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [],
-    "DEFAULT_PERMISSION_CLASSES": [],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "apps.accounts.authentication.DeviceTokenAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
+    ],
     "UNAUTHENTICATED_USER": None,
 }
 
