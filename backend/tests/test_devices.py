@@ -1,7 +1,7 @@
 import pytest
 from django.test import Client
 
-from apps.accounts.models import Device
+from apps.accounts.models import SUPPORTED_LOCALES, Device
 from apps.accounts.tokens import generate_device_token, hash_device_token
 
 
@@ -48,3 +48,72 @@ def test_create_device_with_non_dict_json_body_falls_back_to_default_locale():
     body = response.json()
     device = Device.objects.get(id=body["device_id"])
     assert device.locale == "ne"
+
+
+@pytest.mark.django_db
+def test_create_device_with_absent_locale_defaults_to_ne():
+    client = Client()
+    response = client.post("/api/devices/", data={}, content_type="application/json")
+
+    assert response.status_code == 201
+    body = response.json()
+    device = Device.objects.get(id=body["device_id"])
+    assert device.locale == "ne"
+
+
+@pytest.mark.django_db
+def test_create_device_rejects_an_oversized_locale():
+    client = Client()
+    response = client.post(
+        "/api/devices/",
+        data={"locale": "a" * 17},
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400
+    assert "detail" in response.json()
+    assert not Device.objects.exists()
+
+
+@pytest.mark.django_db
+def test_create_device_rejects_a_non_string_locale():
+    client = Client()
+    response = client.post(
+        "/api/devices/",
+        data={"locale": {"a": 1}},
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400
+    assert "detail" in response.json()
+    assert not Device.objects.exists()
+
+
+@pytest.mark.django_db
+def test_create_device_rejects_an_unsupported_locale_code():
+    client = Client()
+    response = client.post(
+        "/api/devices/",
+        data={"locale": "fr"},
+        content_type="application/json",
+    )
+
+    assert response.status_code == 400
+    assert "detail" in response.json()
+    assert not Device.objects.exists()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("locale", SUPPORTED_LOCALES)
+def test_create_device_accepts_each_supported_locale(locale):
+    client = Client()
+    response = client.post(
+        "/api/devices/",
+        data={"locale": locale},
+        content_type="application/json",
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    device = Device.objects.get(id=body["device_id"])
+    assert device.locale == locale
