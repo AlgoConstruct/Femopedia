@@ -18,6 +18,11 @@ def new_device():
     return Device.objects.create(token_hash=hash_device_token(raw)), raw
 
 
+def bound_device(account):
+    raw = generate_device_token()
+    return Device.objects.create(token_hash=hash_device_token(raw), account=account), raw
+
+
 def test_recovery_codes_are_unique_and_grouped():
     codes = {generate_recovery_code() for _ in range(200)}
     assert len(codes) == 200
@@ -167,3 +172,67 @@ def test_recovery_answers_identically_for_an_unknown_username():
         content_type="application/json",
     )
     assert unknown.status_code == 400
+
+
+@pytest.mark.django_db
+def test_recovery_hashes_the_supplied_code_even_for_an_unknown_username():
+    """C3: the miss path (unknown username) used to return before
+    hash_recovery_code ran at all, skipping the one piece of work the real
+    lookup-then-compare path always does. hash_recovery_code is SHA-256, so
+    the gap this closes is far smaller than login's PBKDF2 case, but the
+    shape should not skip work an attacker could measure."""
+    with mock.patch(
+        "apps.accounts.auth_views.hash_recovery_code", wraps=hash_recovery_code
+    ) as wrapped:
+        Client().post(
+            "/api/auth/recover/",
+            data={
+                "username": "nobody",
+                "recovery_code": "ABCD-EFGH-IJKL-MNOP-QRST-UVWX",
+                "new_password": "a-brand-new-password",
+            },
+            content_type="application/json",
+        )
+    wrapped.assert_called_once()
+
+
+@pytest.mark.django_db
+def test_recovery_revokes_every_other_device_but_not_the_callers():
+    """I3: she reaches for recovery because she believes someone else has
+    access; a recovery that leaves their session alive elsewhere does not
+    help her. The caller's own device -- not necessarily bound to this
+    account yet, since recover() never binds one -- is spared regardless."""
+    _, raw = new_device()
+    signup = Client().post(
+        "/api/auth/signup/",
+        data={"username": "sunita", "password": "a-real-password"},
+        content_type="application/json",
+        headers={"x-device-token": raw},
+    ).json()
+    account = Account.objects.get(id=signup["account_id"])
+
+    caller_device, caller_raw = bound_device(account)
+    other_device, other_raw = bound_device(account)
+
+    response = Client().post(
+        "/api/auth/recover/",
+        data={
+            "username": "sunita",
+            "recovery_code": signup["recovery_code"],
+            "new_password": "a-brand-new-password",
+        },
+        content_type="application/json",
+        headers={"x-device-token": caller_raw},
+    )
+
+    assert response.status_code == 200
+    assert (
+        Client().get("/api/whoami/", headers={"x-device-token": other_raw}).status_code
+        == 401
+    )
+    assert (
+        Client().get("/api/whoami/", headers={"x-device-token": caller_raw}).status_code
+        == 200
+    )
+    assert not Device.objects.filter(id=other_device.id).exists()
+    assert Device.objects.filter(id=caller_device.id).exists()

@@ -1,3 +1,4 @@
+import logging
 import secrets
 from hashlib import sha256
 
@@ -18,17 +19,18 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 
 from apps.accounts import verification
-from apps.accounts.models import Account, Identifier
-from apps.accounts.permissions import RequiresAccount
+from apps.accounts.models import Account, Device, Identifier
 from apps.accounts.serializers import (
     EmailSignupSerializer,
-    PasswordChangeSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     RecoverySerializer,
     UsernameSignupSerializer,
 )
+from apps.accounts.throttling import IPScopedRateThrottle
 from apps.accounts.tokens import generate_recovery_code, hash_recovery_code
+
+logger = logging.getLogger(__name__)
 
 # Matches the shape DRF's default exception handler produces when
 # EmailSignupSerializer.validate_email / UsernameSignupSerializer.validate_username
@@ -264,8 +266,8 @@ RECOVERY_FAILURE = {"detail": "That username and recovery code do not match."}
 )
 @api_view(["POST"])
 @permission_classes([AllowAny])
-@throttle_classes([ScopedRateThrottle])
-@sensitive_variables("recovery_code", "new_password")
+@throttle_classes([IPScopedRateThrottle])
+@sensitive_variables("recovery_code", "new_password", "replacement")
 def recover(request):
     """Set a new password using a recovery code, and issue a replacement code.
 
@@ -285,6 +287,13 @@ def recover(request):
         Identifier.KIND_USERNAME, serializer.validated_data["username"]
     )
     if identifier is None:
+        # No such username: hash the supplied code anyway and discard the
+        # result, so this path costs about the same as a real lookup that
+        # fails on the code itself (C3 of the accounts-core fix wave).
+        # hash_recovery_code is plain SHA-256 rather than login's PBKDF2, so
+        # this closes a far smaller timing gap than the login fix does, but
+        # the shape should still not skip work an attacker could measure.
+        hash_recovery_code(recovery_code)
         return failure
 
     account = identifier.account
@@ -307,6 +316,18 @@ def recover(request):
         update_fields=["password", "recovery_code_hash", "recovery_code_used_at"]
     )
 
+    # She reaches for recovery because she believes someone else has access;
+    # a successful recovery that leaves every other device signed in does
+    # not remove them (I3 of the accounts-core fix wave). The caller's own
+    # device, if it has one, is spared -- it is not necessarily bound to
+    # this account yet, but deleting the very device making this call would
+    # be strictly worse than doing nothing.
+    caller_device = request.auth if isinstance(request.auth, Device) else None
+    other_devices = Device.objects.filter(account=account)
+    if caller_device is not None:
+        other_devices = other_devices.exclude(id=caller_device.id)
+    other_devices.delete()
+
     return Response({"recovery_code": replacement})
 
 
@@ -318,11 +339,19 @@ recover.cls.throttle_scope = "auth"
     summary="Request a password reset email",
     description=(
         "Always answers 202, whatever happens -- known address, unverified "
-        "address, or no such address at all. Any difference between "
-        "'sent' and 'no such address' would turn this unauthenticated "
-        "endpoint into a way to ask whether a given woman has an account "
-        "here. Mail goes out only when the address exists and is verified: "
-        "an unverified address may belong to someone else entirely."
+        "address, no such address, or a mail-sending failure. Any "
+        "difference between 'sent' and 'no such address' would turn this "
+        "unauthenticated endpoint into a way to ask whether a given woman "
+        "has an account here. Mail goes out only when the address exists "
+        "and is verified: an unverified address may belong to someone "
+        "else entirely.\n\n"
+        "Residual timing note: the email is sent synchronously within this "
+        "request (this project has no task queue), so a known-and-verified "
+        "address still measurably takes longer to answer than an unknown "
+        "or unverified one -- the SMTP round trip dominates. That gap is a "
+        "real, currently open timing oracle; equal response bodies and "
+        "status codes do not close it, and nothing short of moving the "
+        "send off the request path (a queue) will."
     ),
     auth=[],
     request=PasswordResetRequestSerializer,
@@ -339,13 +368,25 @@ recover.cls.throttle_scope = "auth"
 )
 @api_view(["POST"])
 @permission_classes([AllowAny])
-@throttle_classes([ScopedRateThrottle])
+@throttle_classes([IPScopedRateThrottle])
 @sensitive_variables()
 def password_reset(request):
     """Always answer 202, whatever happens.
 
     Any difference between "sent" and "no such address" turns this endpoint
-    into a way to ask whether a given woman has an account here.
+    into a way to ask whether a given woman has an account here -- and that
+    includes a mail-backend failure: without the broad catch below, an SMTP
+    outage would answer a known-and-verified address with a 500 and
+    everything else with a 202, which is exactly the same oracle wearing a
+    different status code (C2 of the accounts-core fix wave).
+
+    Residual timing note: the send below still happens synchronously, inside
+    this request. This project has no task queue, so there is nowhere to
+    hand the send off to; a known-and-verified address therefore still takes
+    measurably longer to answer than the other cases, because of the SMTP
+    round trip. That gap is real and is not closed by anything in this
+    function -- it is written down here rather than left for someone to
+    assume the equal status codes and bodies mean the endpoint is safe.
     """
     serializer = PasswordResetRequestSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -354,7 +395,13 @@ def password_reset(request):
         Identifier.KIND_EMAIL, serializer.validated_data["email"]
     )
     if identifier is not None and identifier.is_verified:
-        verification.send_password_reset_email(identifier)
+        try:
+            verification.send_password_reset_email(identifier)
+        except Exception:
+            # Deliberately broad: whatever the mail backend raises, it must
+            # not surface as a response that differs from the "no such
+            # address" case. Logged so an outage is still visible somewhere.
+            logger.exception("Failed to send password reset email")
 
     return Response({"status": "sent"}, status=status.HTTP_202_ACCEPTED)
 
@@ -393,7 +440,7 @@ password_reset.cls.throttle_scope = "auth"
 )
 @api_view(["POST"])
 @permission_classes([AllowAny])
-@throttle_classes([ScopedRateThrottle])
+@throttle_classes([IPScopedRateThrottle])
 @sensitive_variables("new_password")
 def password_reset_confirm(request):
     """Consume a reset token and set the new password.
@@ -427,60 +474,18 @@ def password_reset_confirm(request):
 
     account.set_password(new_password)
     account.save(update_fields=["password"])
+
+    # Same reasoning as recover() above (I3 of the accounts-core fix wave):
+    # a password reset is exactly the moment she is trying to lock someone
+    # else out, so it must not leave their session alive on some other
+    # device.
+    caller_device = request.auth if isinstance(request.auth, Device) else None
+    other_devices = Device.objects.filter(account=account)
+    if caller_device is not None:
+        other_devices = other_devices.exclude(id=caller_device.id)
+    other_devices.delete()
+
     return Response({"status": "changed"})
 
 
 password_reset_confirm.cls.throttle_scope = "auth"
-
-
-@extend_schema(
-    operation_id="passwordChange",
-    summary="Change the signed-in account's password",
-    description=(
-        "Requires the current password. The calling device must be signed "
-        "in -- an anonymous device has no account to change the password of."
-    ),
-    request=PasswordChangeSerializer,
-    responses={
-        200: OpenApiResponse(
-            description="The password is changed.",
-            response=inline_serializer(
-                name="PasswordChangeResponse", fields={"status": serializers.CharField()}
-            ),
-        ),
-        400: OpenApiResponse(
-            description="Invalid payload, or the current password is wrong.",
-            response=inline_serializer(
-                name="PasswordChangeError", fields={"detail": serializers.CharField()}
-            ),
-        ),
-        403: OpenApiResponse(description="The calling device is not signed in."),
-        429: OpenApiResponse(description="Rate limit exceeded."),
-    },
-)
-@api_view(["POST"])
-@permission_classes([RequiresAccount])
-@throttle_classes([ScopedRateThrottle])
-@sensitive_variables("current_password", "new_password")
-def password_change(request):
-    """Change the signed-in account's password, given the current one."""
-    account = request.auth.account
-
-    serializer = PasswordChangeSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-
-    current_password = serializer.validated_data["current_password"]
-    new_password = serializer.validated_data["new_password"]
-
-    if not account.check_password(current_password):
-        return Response(
-            {"detail": "Current password is incorrect."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    account.set_password(new_password)
-    account.save(update_fields=["password"])
-    return Response({"status": "changed"})
-
-
-password_change.cls.throttle_scope = "auth"
