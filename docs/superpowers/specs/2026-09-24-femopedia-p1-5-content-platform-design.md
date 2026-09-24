@@ -80,6 +80,8 @@ The cost of that deferral, stated plainly: entries authored during P1 will be ta
 
 `WAGTAIL_I18N_ENABLED = True` with `WAGTAIL_CONTENT_LANGUAGES = [("en", "English"), ("ne", "Nepali")]`, one page tree per locale, linked by `wagtail-localize`.
 
+Wagtail assigns a workflow to a page or a page subtree, not to a locale directly. `wagtail-localize` gives each locale its own root page, so "assigned per locale tree" means the workflow is attached to that locale's root and inherited by its descendants. If the implementation finds the locale roots do not exist as separate subtrees, that assumption is wrong and the assignment mechanism needs rethinking before proceeding.
+
 `LANGUAGE_CODE` moves from `"en-us"` to `"en"`. Wagtail requires it to match a declared content language, and `en-us` does not.
 
 ### Two workflows, assigned per locale tree
