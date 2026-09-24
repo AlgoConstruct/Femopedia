@@ -11,10 +11,13 @@ class EmailSignupSerializer(serializers.Serializer):
 
     def validate_email(self, value: str) -> str:
         if Identifier.lookup(Identifier.KIND_EMAIL, value) is not None:
-            # Deliberately the same shape of error as any other validation
-            # failure. This endpoint requires a device token, so it is not an
-            # open oracle, but there is no reason to confirm an address more
-            # loudly than necessary.
+            # This *is* an existence oracle: a device token is one
+            # unauthenticated POST /api/devices/ call away, so requiring one
+            # here does not meaningfully gate who can ask. It is kept anyway
+            # -- deliberately, not because it is closed -- because a clear
+            # "this email cannot be used" message at signup is worth more to
+            # her than the marginal privacy of a vaguer error would be (I6
+            # of the accounts-core fix wave).
             raise serializers.ValidationError("This email cannot be used.")
         return value
 
