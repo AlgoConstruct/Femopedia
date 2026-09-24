@@ -9,7 +9,9 @@ than propagating.
 
 import httpx
 import redis
+from cryptography.fernet import Fernet
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.db import connection
 from neo4j import GraphDatabase
 
@@ -62,6 +64,39 @@ def check_neo4j() -> bool:
             driver.close()
     except Exception:
         return False
+
+
+def validate_identifier_crypto_settings() -> None:
+    """Fail startup rather than silently degrading identifier protection.
+
+    IDENTIFIER_PEPPER has no default (see config/settings.py), so a value
+    missing entirely already raises on its own via django-environ. An empty
+    string is different: it is a valid string, so it slips past that check,
+    and hmac.new(b"", ...) is a perfectly valid *unkeyed* digest -- the blind
+    index would still work, just be brute-forceable by anyone with the
+    database, with no error anywhere to say so. `.env.example` ships both
+    IDENTIFIER_PEPPER and FIELD_ENCRYPTION_KEY empty, and the README's setup
+    is `cp .env.example .env`, so this is the documented path, not an edge
+    case -- it must be caught here, at process startup, rather than
+    discovered later from a data breach.
+    """
+    if not settings.IDENTIFIER_PEPPER:
+        raise ImproperlyConfigured(
+            "IDENTIFIER_PEPPER is empty. An empty pepper degrades the "
+            "identifier blind index to an unkeyed hash anyone holding a "
+            "database dump can reproduce. Generate one with:\n"
+            "    python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+        )
+
+    try:
+        Fernet(settings.FIELD_ENCRYPTION_KEY.encode("utf-8"))
+    except Exception as exc:
+        raise ImproperlyConfigured(
+            "FIELD_ENCRYPTION_KEY is not a valid Fernet key. Generate one "
+            "with:\n"
+            "    python -c \"from cryptography.fernet import Fernet; "
+            'print(Fernet.generate_key().decode())"'
+        ) from exc
 
 
 def run_all() -> dict[str, bool]:

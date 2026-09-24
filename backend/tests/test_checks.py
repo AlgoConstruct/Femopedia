@@ -1,9 +1,45 @@
 from unittest import mock
 
 import pytest
-from django.test import Client
+from django.core.exceptions import ImproperlyConfigured
+from django.test import Client, override_settings
 
 from apps.core import checks
+
+# --- I5: an empty IDENTIFIER_PEPPER or an invalid FIELD_ENCRYPTION_KEY must
+# fail startup, not silently degrade -----------------------------------------
+#
+# IDENTIFIER_PEPPER has no default in config/settings.py, so a value missing
+# entirely already raises via django-environ before this function is ever
+# reached. An *empty string* is different: it's a valid string, so it slips
+# past that check, and hmac.new(b"", ...) is a valid unkeyed digest -- the
+# blind index would still work, just be brute-forceable by anyone holding a
+# database dump, with nothing anywhere to say so. .env.example ships both
+# keys empty and the README's setup is `cp .env.example .env`, so this is
+# the documented path, not an edge case.
+
+
+def test_validate_identifier_crypto_settings_rejects_an_empty_pepper():
+    with (
+        override_settings(IDENTIFIER_PEPPER=""),
+        pytest.raises(ImproperlyConfigured, match="IDENTIFIER_PEPPER"),
+    ):
+        checks.validate_identifier_crypto_settings()
+
+
+def test_validate_identifier_crypto_settings_rejects_an_invalid_fernet_key():
+    with (
+        override_settings(FIELD_ENCRYPTION_KEY="not-a-valid-fernet-key"),
+        pytest.raises(ImproperlyConfigured, match="FIELD_ENCRYPTION_KEY"),
+    ):
+        checks.validate_identifier_crypto_settings()
+
+
+def test_validate_identifier_crypto_settings_passes_for_valid_settings():
+    """The test environment's own values (pyproject.toml's [tool.pytest.
+    ini_options].env block) must themselves pass, since AccountsConfig.ready()
+    now calls this at every process start, including under pytest."""
+    checks.validate_identifier_crypto_settings()
 
 
 def test_each_check_returns_false_when_the_backend_raises():

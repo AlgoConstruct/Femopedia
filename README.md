@@ -19,8 +19,19 @@ Anonymous, language-matched AI health companion for women in Nepal and South Asi
     uv run python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
     # paste the generated value into backend/.env as DJANGO_SECRET_KEY
 
+    uv run python -c "import secrets; print(secrets.token_urlsafe(32))"
+    # paste the generated value into backend/.env as IDENTIFIER_PEPPER
+
+    uv run python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    # paste the generated value into backend/.env as FIELD_ENCRYPTION_KEY
+
     uv run python manage.py migrate
     uv run python manage.py runserver
+
+`IDENTIFIER_PEPPER` and `FIELD_ENCRYPTION_KEY` protect stored email/username
+identifiers (see `backend/apps/accounts/crypto.py`); an empty value for either
+now fails startup rather than silently degrading protection (see
+`backend/apps/core/checks.py`).
 
 See `docs/superpowers/specs/` for the design this implements.
 
