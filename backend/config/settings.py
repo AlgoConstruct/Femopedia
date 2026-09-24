@@ -109,3 +109,11 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_REQUEST": True,
     "SORT_OPERATIONS": True,
 }
+
+# Keyed separately from SECRET_KEY so that rotating a Django session secret
+# does not silently destroy the ability to find or read stored identifiers.
+# IDENTIFIER_PEPPER keys the blind index used for lookup; FIELD_ENCRYPTION_KEY
+# encrypts the identifier values themselves. Losing either is unrecoverable,
+# so both must be backed up somewhere other than the database they protect.
+IDENTIFIER_PEPPER = env("IDENTIFIER_PEPPER")
+FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY")

@@ -18,6 +18,7 @@ dependencies = [
     # Pre-1.0, so a minor bump can change generated output; pinned to the
     # minor that schema.yml was generated from.
     "drf-spectacular>=0.30,<0.31",
+    "cryptography>=43,<47",
 ]
 
 [dependency-groups]
@@ -40,6 +41,8 @@ env = [
     "D:DJANGO_DEBUG=True",
     "D:DATABASE_URL=postgres://femopedia:femopedia@localhost:5432/femopedia",
     "D:NEO4J_PASSWORD=femopedia-dev-password",
+    "D:IDENTIFIER_PEPPER=test-only-pepper-not-a-real-secret",
+    "D:FIELD_ENCRYPTION_KEY=ZmVtb3BlZGlhLXRlc3Qta2V5LW5vdC1hLXNlY3JldCE=",
 ]
 
 [tool.ruff]
