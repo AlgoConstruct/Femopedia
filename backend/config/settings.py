@@ -118,3 +118,14 @@ SPECTACULAR_SETTINGS = {
 # so both must be backed up somewhere other than the database they protect.
 IDENTIFIER_PEPPER = env("IDENTIFIER_PEPPER")
 FIELD_ENCRYPTION_KEY = env("FIELD_ENCRYPTION_KEY")
+
+# Console backend in development; a real sending service is a launch
+# dependency, since verification mail landing in spam breaks signup for
+# anyone whose only route in is an email address.
+EMAIL_BACKEND = env(
+    "DJANGO_EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
+)
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@femopedia.local")
+ACCOUNT_VERIFICATION_URL = env(
+    "ACCOUNT_VERIFICATION_URL", default="http://localhost:3000/verify-email"
+)

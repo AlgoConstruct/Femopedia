@@ -5,4 +5,5 @@ from apps.accounts import auth_views, views
 urlpatterns = [
     path("devices/", views.create_device, name="create-device"),
     path("auth/signup/", auth_views.signup, name="auth-signup"),
+    path("auth/verify-email/", auth_views.verify_email, name="auth-verify-email"),
 ]

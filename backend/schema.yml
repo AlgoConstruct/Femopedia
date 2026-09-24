@@ -12,7 +12,7 @@ paths:
       operationId: signup
       description: 'Signing up issues no new credential: the caller already holds
         a device token, and this gives that device an owner by setting its account.
-        No verification email is sent by this endpoint.'
+        A verification email is sent to the address afterward.'
       summary: Create an account and bind the calling device to it
       tags:
       - auth
@@ -43,6 +43,42 @@ paths:
           description: Missing or unknown device token.
         '409':
           description: The calling device is already signed in.
+        '429':
+          description: Rate limit exceeded.
+  /api/auth/verify-email/:
+    post:
+      operationId: verifyEmail
+      description: 'Confirms an email address from the link sent by signup. Deliberately
+        AllowAny: she may open the link on a device that has never used the application,
+        and requiring a device token there would strand her.'
+      summary: Confirm an email address
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequestRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyEmailResponse'
+          description: The identifier is now verified.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyEmailError'
+          description: The token is invalid or has expired.
         '429':
           description: Rate limit exceeded.
   /api/devices/:
@@ -232,6 +268,28 @@ components:
           format: uuid
       required:
       - account_id
+    VerifyEmailError:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    VerifyEmailRequestRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+      required:
+      - token
+    VerifyEmailResponse:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+      - status
     WhoamiResponse:
       type: object
       properties:
