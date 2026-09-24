@@ -122,3 +122,50 @@ def test_authentication_records_a_device_label(account):
     )
     device = Device.objects.get(account=account)
     assert "Android" in device.label
+
+
+@pytest.mark.django_db
+def test_an_anonymous_devices_label_stays_empty():
+    """I4: an anonymous device has no owner to ever show a label to, so
+    writing one is a plaintext handset fingerprint sitting on a row that
+    used to hold only a hash and a locale -- the branch's one anonymity
+    regression. Only a device with an account should record one."""
+    raw = generate_device_token()
+    Device.objects.create(token_hash=hash_device_token(raw))
+
+    Client().get(
+        "/api/whoami/",
+        headers={"x-device-token": raw, "user-agent": "Mozilla/5.0 (Linux; Android 14)"},
+    )
+
+    device = Device.objects.get(token_hash=hash_device_token(raw))
+    assert device.label == ""
+
+
+@pytest.mark.django_db
+def test_revoking_the_callers_own_device_returns_a_fresh_anonymous_token():
+    """Minor finding: device_revoke used to let the caller delete its own
+    device, leaving the client with a dead token and no replacement, unlike
+    logout. Chosen fix: mint a fresh anonymous token, exactly as logout
+    does, rather than simply excluding the caller's own id from what can be
+    revoked."""
+    account = Account.objects.create()
+    account.set_password("a-real-password")
+    account.save()
+    Identifier.create_for(account, Identifier.KIND_EMAIL, "her@example.com", verified=True)
+    caller, raw = bound_device(account)
+
+    response = Client().delete(
+        f"/api/account/devices/{caller.id}/", headers={"x-device-token": raw}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    new_token = body["device_token"]
+    assert new_token != raw
+
+    assert not Device.objects.filter(id=caller.id).exists()
+    assert Client().get("/api/whoami/", headers={"x-device-token": raw}).status_code == 401
+    fresh = Client().get("/api/whoami/", headers={"x-device-token": new_token})
+    assert fresh.status_code == 200
+    assert fresh.json()["device_id"] == body["device_id"]

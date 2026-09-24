@@ -88,6 +88,11 @@ REST_FRAMEWORK = {
         "anon": "60/hour",
         "device-create": "10/hour",
         "auth": "20/hour",
+        # Read-only account-scoped endpoints (summary, device list/revoke,
+        # export). Not credential-checking, so device-keyed is fine; higher
+        # than "auth" because a session/devices screen may poll or refresh
+        # more than once a minute.
+        "account": "120/hour",
     },
 }
 

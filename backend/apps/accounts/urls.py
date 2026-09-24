@@ -15,7 +15,7 @@ urlpatterns = [
         auth_views.password_reset_confirm,
         name="auth-password-reset-confirm",
     ),
-    path("account/password/", auth_views.password_change, name="account-password"),
+    path("account/password/", account_views.password_change, name="account-password"),
     path("account/", account_views.account_summary, name="account-summary"),
     path("account/devices/", account_views.device_list, name="account-devices"),
     path(
