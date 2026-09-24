@@ -10,11 +10,12 @@ it was deferred and when it comes due.
 
 ## Blocking on a human, not on code
 
-- **Vercel project settings.** Root Directory must be set to `frontend`, and the
-  Ignored Build Step to `git diff --quiet HEAD^ HEAD -- frontend/`. The
-  repository root moved during P0, so until this is done Vercel builds the wrong
-  directory. Guard the command with `git rev-parse HEAD^ >/dev/null 2>&1 || exit 1`,
-  because `HEAD^` is absent on a shallow clone or a first build.
+- ~~**Vercel project settings.**~~ Done 2026-09-24: the project is configured to
+  deploy `frontend/` only. If backend-only commits still trigger a frontend
+  build, set the Ignored Build Step to
+  `git rev-parse HEAD^ >/dev/null 2>&1 || exit 1; git diff --quiet HEAD^ HEAD -- frontend/`
+  — the `rev-parse` guard matters because `HEAD^` is absent on a shallow clone
+  or a first build, and an unguarded command errors rather than skipping.
 - **CI has never been observed green.** `gh` is not installed on the development
   machine, so no run has been watched from the CLI. Confirm in the Actions tab
   for `design/v1-anonymous-ai-qa`, or install `gh`.
