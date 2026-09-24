@@ -4,7 +4,7 @@ from unittest import mock
 import pytest
 from django.test import Client, RequestFactory, override_settings
 
-from apps.accounts import auth_views
+from apps.accounts import session_views
 from apps.accounts.models import Account, Device, Identifier
 from apps.accounts.tokens import generate_device_token, hash_device_token
 from tests.test_sensitive_variables import _cleansed_locals_for_frame
@@ -117,13 +117,13 @@ def test_login_cleanses_the_password_from_its_frame_locals(account):
 
     with (
         mock.patch(
-            "apps.accounts.auth_views.Identifier.lookup",
+            "apps.accounts.session_views.Identifier.lookup",
             side_effect=RuntimeError("db exploded"),
         ),
         override_settings(DEBUG=False),
     ):
         try:
-            auth_views.login(request)
+            session_views.login(request)
         except RuntimeError:
             cleansed = _cleansed_locals_for_frame("login", sys.exc_info()[2])
         else:
