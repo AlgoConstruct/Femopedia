@@ -1,9 +1,15 @@
+import json
+
+from django.http import HttpResponse
 from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
 from rest_framework import serializers, status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 
+from apps.accounts.data_rights import build_export
 from apps.accounts.models import Device
+from apps.accounts.permissions import RequiresAccount
+from apps.accounts.serializers import AccountDeleteSerializer
 
 NOT_SIGNED_IN = OpenApiResponse(
     description="This device is not signed in.",
@@ -14,7 +20,11 @@ NOT_SIGNED_IN = OpenApiResponse(
 
 
 def _require_account(request):
-    """Return the caller's account, or None when the device is anonymous."""
+    """Return the caller's account.
+
+    RequiresAccount has already turned away any device without one, so this
+    is never None at the point a view calls it.
+    """
     return request.auth.account
 
 
@@ -46,13 +56,9 @@ def _require_account(request):
     },
 )
 @api_view(["GET"])
+@permission_classes([RequiresAccount])
 def account_summary(request):
     account = _require_account(request)
-    if account is None:
-        return Response(
-            {"detail": "This device is not signed in."},
-            status=status.HTTP_403_FORBIDDEN,
-        )
 
     # Kinds and verification status only. The values themselves are encrypted
     # at rest and there is no reason for a summary screen to decrypt them.
@@ -98,13 +104,9 @@ def account_summary(request):
     },
 )
 @api_view(["GET"])
+@permission_classes([RequiresAccount])
 def device_list(request):
     account = _require_account(request)
-    if account is None:
-        return Response(
-            {"detail": "This device is not signed in."},
-            status=status.HTTP_403_FORBIDDEN,
-        )
 
     current_id = request.auth.id
     devices = [
@@ -142,13 +144,9 @@ def device_list(request):
     },
 )
 @api_view(["DELETE"])
+@permission_classes([RequiresAccount])
 def device_revoke(request, device_id):
     account = _require_account(request)
-    if account is None:
-        return Response(
-            {"detail": "This device is not signed in."},
-            status=status.HTTP_403_FORBIDDEN,
-        )
 
     # Scoped to her own devices: a device belonging to someone else must be
     # indistinguishable from one that does not exist.
@@ -157,4 +155,76 @@ def device_revoke(request, device_id):
         return Response(
             {"detail": "No such device."}, status=status.HTTP_404_NOT_FOUND
         )
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@extend_schema(
+    operation_id="accountExport",
+    summary="Export everything held about the calling account",
+    description=(
+        "Returns the account, its identifiers (decrypted) and its devices as "
+        "a downloadable JSON attachment. Nothing is written to disk on the "
+        "server: the file exists only in this response. Password hashes and "
+        "device token hashes are never included -- they are credentials, not "
+        "her data."
+    ),
+    request=None,
+    responses={
+        200: OpenApiResponse(description="The export, as a JSON file attachment."),
+        403: NOT_SIGNED_IN,
+    },
+)
+@api_view(["POST"])
+@permission_classes([RequiresAccount])
+def account_export(request):
+    account = _require_account(request)
+
+    # Returned inline rather than written to disk and mailed as a link: no
+    # stored artefact to leak, and no link sitting in an inbox someone else
+    # may read.
+    payload = json.dumps(build_export(account), indent=2)
+    response = HttpResponse(payload, content_type="application/json")
+    response["Content-Disposition"] = 'attachment; filename="femopedia-export.json"'
+    return response
+
+
+@extend_schema(
+    operation_id="accountDelete",
+    summary="Delete the calling account and everything referencing it",
+    description=(
+        "Requires the account password: a valid device token alone is never "
+        "sufficient, because the person holding the unlocked phone may not "
+        "be her. Deletion is immediate and hard, with no grace period."
+    ),
+    request=AccountDeleteSerializer,
+    responses={
+        204: OpenApiResponse(description="The account and everything referencing it is gone."),
+        400: OpenApiResponse(
+            description="The password is incorrect.",
+            response=inline_serializer(
+                name="AccountDeleteError", fields={"detail": serializers.CharField()}
+            ),
+        ),
+        403: NOT_SIGNED_IN,
+    },
+)
+@api_view(["POST"])
+@permission_classes([RequiresAccount])
+def account_delete(request):
+    account = _require_account(request)
+
+    serializer = AccountDeleteSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    # A valid device token is never sufficient: the person holding the
+    # unlocked phone may not be her.
+    if not account.check_password(serializer.validated_data["password"]):
+        return Response(
+            {"detail": "Password is incorrect."}, status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Immediate and hard, with no grace period. If she is deleting because
+    # someone found this application on her phone, a waiting period leaves the
+    # data in place during exactly the window in which it can hurt her.
+    account.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)

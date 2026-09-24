@@ -31,6 +31,44 @@ paths:
               schema:
                 $ref: '#/components/schemas/AccountForbidden'
           description: This device is not signed in.
+  /api/account/delete/:
+    post:
+      operationId: accountDelete
+      description: 'Requires the account password: a valid device token alone is never
+        sufficient, because the person holding the unlocked phone may not be her.
+        Deletion is immediate and hard, with no grace period.'
+      summary: Delete the calling account and everything referencing it
+      tags:
+      - account
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountDeleteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AccountDeleteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AccountDeleteRequest'
+        required: true
+      security:
+      - DeviceToken: []
+      responses:
+        '204':
+          description: The account and everything referencing it is gone.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountDeleteError'
+          description: The password is incorrect.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountForbidden'
+          description: This device is not signed in.
   /api/account/devices/:
     get:
       operationId: accountDevices
@@ -90,6 +128,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/AccountDeviceNotFound'
           description: No such device on this account.
+  /api/account/export/:
+    post:
+      operationId: accountExport
+      description: 'Returns the account, its identifiers (decrypted) and its devices
+        as a downloadable JSON attachment. Nothing is written to disk on the server:
+        the file exists only in this response. Password hashes and device token hashes
+        are never included -- they are credentials, not her data.'
+      summary: Export everything held about the calling account
+      tags:
+      - account
+      security:
+      - DeviceToken: []
+      responses:
+        '200':
+          description: The export, as a JSON file attachment.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountForbidden'
+          description: This device is not signed in.
   /api/account/password/:
     post:
       operationId: passwordChange
@@ -475,6 +534,22 @@ paths:
           description: Missing or unknown device token.
 components:
   schemas:
+    AccountDeleteError:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    AccountDeleteRequest:
+      type: object
+      properties:
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
     AccountDevice:
       type: object
       properties:

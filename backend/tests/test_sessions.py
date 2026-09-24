@@ -92,6 +92,28 @@ def test_an_anonymous_device_has_no_account_endpoints():
 
 
 @pytest.mark.django_db
+def test_an_anonymous_device_cannot_list_devices():
+    raw = generate_device_token()
+    Device.objects.create(token_hash=hash_device_token(raw))
+    response = Client().get("/api/account/devices/", headers={"x-device-token": raw})
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_an_anonymous_device_cannot_revoke_a_device():
+    raw = generate_device_token()
+    Device.objects.create(token_hash=hash_device_token(raw))
+
+    account = Account.objects.create()
+    other, _ = bound_device(account)
+
+    response = Client().delete(
+        f"/api/account/devices/{other.id}/", headers={"x-device-token": raw}
+    )
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
 def test_authentication_records_a_device_label(account):
     _, raw = bound_device(account)
     Client().get(

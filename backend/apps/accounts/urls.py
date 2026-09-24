@@ -23,4 +23,6 @@ urlpatterns = [
         account_views.device_revoke,
         name="account-device-revoke",
     ),
+    path("account/export/", account_views.account_export, name="account-export"),
+    path("account/delete/", account_views.account_delete, name="account-delete"),
 ]

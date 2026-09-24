@@ -19,6 +19,7 @@ from rest_framework.throttling import ScopedRateThrottle
 
 from apps.accounts import verification
 from apps.accounts.models import Account, Identifier
+from apps.accounts.permissions import RequiresAccount
 from apps.accounts.serializers import (
     EmailSignupSerializer,
     PasswordChangeSerializer,
@@ -458,16 +459,12 @@ password_reset_confirm.cls.throttle_scope = "auth"
     },
 )
 @api_view(["POST"])
+@permission_classes([RequiresAccount])
 @throttle_classes([ScopedRateThrottle])
 @sensitive_variables("current_password", "new_password")
 def password_change(request):
     """Change the signed-in account's password, given the current one."""
     account = request.auth.account
-    if account is None:
-        return Response(
-            {"detail": "This device is not signed in."},
-            status=status.HTTP_403_FORBIDDEN,
-        )
 
     serializer = PasswordChangeSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
