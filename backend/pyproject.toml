@@ -29,10 +29,10 @@ python_files = ["test_*.py"]
 testpaths = ["tests"]
 markers = ["integration: requires docker compose services to be running"]
 env = [
-    "DJANGO_SECRET_KEY=test-only-not-a-real-secret",
-    "DJANGO_DEBUG=True",
-    "DATABASE_URL=postgres://femopedia:femopedia@localhost:5432/femopedia",
-    "NEO4J_PASSWORD=femopedia-dev-password",
+    "D:DJANGO_SECRET_KEY=test-only-not-a-real-secret",
+    "D:DJANGO_DEBUG=True",
+    "D:DATABASE_URL=postgres://femopedia:femopedia@localhost:5432/femopedia",
+    "D:NEO4J_PASSWORD=femopedia-dev-password",
 ]
 
 [tool.ruff]
