@@ -23,3 +23,22 @@ Anonymous, language-matched AI health companion for women in Nepal and South Asi
     uv run python manage.py runserver
 
 See `docs/superpowers/specs/` for the design this implements.
+
+## API schema
+
+The OpenAPI 3 schema lives at `backend/schema.yml` and is generated from the
+code, not written by hand. Regenerate it whenever an endpoint or its request or
+response shape changes:
+
+    cd backend && uv run python manage.py spectacular \
+        --file schema.yml --validate --fail-on-warn
+
+A stale `schema.yml` fails the test suite, because the frontend generates its
+request and response types from that file and a drifted copy produces wrong
+types silently.
+
+Browsable docs are served at `/api/docs/` (Swagger UI) and `/api/redoc/`, with
+the raw schema at `/api/schema/`. They are not public: a schema enumerates the
+whole API surface, so access requires `DEBUG`, or a matching `X-Docs-Token`
+header when `DOCS_TOKEN` is set in the environment. With `DOCS_TOKEN` unset and
+`DEBUG` off, the schema is served to nobody.

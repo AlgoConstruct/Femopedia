@@ -1,4 +1,5 @@
-from rest_framework import status
+from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
+from rest_framework import serializers, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -9,12 +10,37 @@ REQUIRED_SERVICES = ("postgres", "redis")
 DERIVED_SERVICES = ("chroma", "neo4j")
 
 
+@extend_schema(
+    operation_id="health",
+    summary="Liveness probe",
+    description="Returns 200 whenever the process is serving requests.",
+    auth=[],
+    responses={
+        200: inline_serializer(
+            name="HealthResponse", fields={"status": serializers.CharField()}
+        )
+    },
+)
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def health(request):
     return Response({"status": "ok"})
 
 
+@extend_schema(
+    operation_id="whoami",
+    summary="Identify the calling device",
+    description=(
+        "Returns the id of the device the supplied X-Device-Token resolves to. "
+        "The device id is an opaque UUID and carries no personal information."
+    ),
+    responses={
+        200: inline_serializer(
+            name="WhoamiResponse", fields={"device_id": serializers.UUIDField()}
+        ),
+        401: OpenApiResponse(description="Missing or unknown device token."),
+    },
+)
 @api_view(["GET"])
 def whoami(request):
     # request.user is polymorphic once Wagtail staff sessions arrive (P1.5),
@@ -23,6 +49,39 @@ def whoami(request):
     return Response({"device_id": str(request.auth.id)})
 
 
+@extend_schema(
+    operation_id="healthDeep",
+    summary="Readiness probe across every datastore",
+    description=(
+        "Reports reachability per datastore. Postgres and Redis are required, "
+        "so either being down returns 503 with status \"down\". Chroma and "
+        "Neo4j hold derived, rebuildable data, so either being down returns "
+        "200 with status \"degraded\" rather than taking the API out of "
+        "rotation during a rebuild."
+    ),
+    auth=[],
+    responses={
+        200: OpenApiResponse(
+            description="All required services up; status is ok or degraded.",
+            response=inline_serializer(
+                name="HealthDeepResponse",
+                fields={
+                    "status": serializers.CharField(),
+                    "services": inline_serializer(
+                        name="HealthDeepServices",
+                        fields={
+                            "postgres": serializers.BooleanField(),
+                            "redis": serializers.BooleanField(),
+                            "chroma": serializers.BooleanField(),
+                            "neo4j": serializers.BooleanField(),
+                        },
+                    ),
+                },
+            ),
+        ),
+        503: OpenApiResponse(description="A required datastore is unreachable."),
+    },
+)
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def health_deep(request):

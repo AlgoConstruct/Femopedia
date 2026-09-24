@@ -1,0 +1,189 @@
+openapi: 3.0.3
+info:
+  title: Femopedia API
+  version: 0.1.0
+  description: 'Anonymous AI health companion. The only credential is a device token:
+    call POST /api/devices/ once, keep the returned token on the device, and send
+    it as X-Device-Token on every authenticated request. No personal identifier is
+    required or accepted.'
+paths:
+  /api/devices/:
+    post:
+      operationId: createDevice
+      description: Creates an anonymous device and returns its token. The token is
+        shown exactly once; only its SHA-256 hash is stored, so a lost token cannot
+        be recovered and a database leak yields no usable credential. No personal
+        identifier is required or accepted.
+      summary: Issue an anonymous device token
+      tags:
+      - devices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeviceRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateDeviceRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateDeviceRequestRequest'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateDeviceResponse'
+              examples:
+                Created:
+                  value:
+                    device_id: 3f2a1c64-5b7e-4e0a-9d2c-8e6b1f0a7c41
+                    device_token: kR3v9Qw1xTzB7nS5mH2pL8dY4cJ6gA0eUfV-oXbNiZk
+          description: Device created.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+          description: Unsupported or malformed locale.
+        '429':
+          description: Rate limit exceeded.
+  /api/health/:
+    get:
+      operationId: health
+      description: Returns 200 whenever the process is serving requests.
+      summary: Liveness probe
+      tags:
+      - health
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+          description: ''
+  /api/health/deep/:
+    get:
+      operationId: healthDeep
+      description: Reports reachability per datastore. Postgres and Redis are required,
+        so either being down returns 503 with status "down". Chroma and Neo4j hold
+        derived, rebuildable data, so either being down returns 200 with status "degraded"
+        rather than taking the API out of rotation during a rebuild.
+      summary: Readiness probe across every datastore
+      tags:
+      - health
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthDeepResponse'
+          description: All required services up; status is ok or degraded.
+        '503':
+          description: A required datastore is unreachable.
+  /api/whoami/:
+    get:
+      operationId: whoami
+      description: Returns the id of the device the supplied X-Device-Token resolves
+        to. The device id is an opaque UUID and carries no personal information.
+      summary: Identify the calling device
+      tags:
+      - whoami
+      security:
+      - DeviceToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WhoamiResponse'
+          description: ''
+        '401':
+          description: Missing or unknown device token.
+components:
+  schemas:
+    CreateDeviceRequestRequest:
+      type: object
+      properties:
+        locale:
+          allOf:
+          - $ref: '#/components/schemas/LocaleEnum'
+          default: ne
+    CreateDeviceResponse:
+      type: object
+      properties:
+        device_id:
+          type: string
+          format: uuid
+        device_token:
+          type: string
+      required:
+      - device_id
+      - device_token
+    ErrorDetail:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    HealthDeepResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        services:
+          $ref: '#/components/schemas/HealthDeepServices'
+      required:
+      - services
+      - status
+    HealthDeepServices:
+      type: object
+      properties:
+        postgres:
+          type: boolean
+        redis:
+          type: boolean
+        chroma:
+          type: boolean
+        neo4j:
+          type: boolean
+      required:
+      - chroma
+      - neo4j
+      - postgres
+      - redis
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+      - status
+    LocaleEnum:
+      enum:
+      - ne
+      - ne-Latn
+      - hi-Latn
+      - en
+      type: string
+      description: |-
+        * `ne` - ne
+        * `ne-Latn` - ne-Latn
+        * `hi-Latn` - hi-Latn
+        * `en` - en
+    WhoamiResponse:
+      type: object
+      properties:
+        device_id:
+          type: string
+          format: uuid
+      required:
+      - device_id
+  securitySchemes:
+    DeviceToken:
+      type: apiKey
+      in: header
+      name: X-Device-Token
+      description: The token returned once by POST /api/devices/. The server stores
+        only its SHA-256 hash, so it cannot be recovered if the client loses it.
