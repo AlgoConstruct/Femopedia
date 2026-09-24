@@ -17,7 +17,7 @@ This slice is staff-side only. It is independent of the user accounts and dashbo
 
 - Wagtail 8 integrated into `backend/`, admin served at `/cms/`
 - A `cms` Django app defining `KnowledgeEntry` and `BlogPost` page types on a shared abstract base
-- `wagtail-localize`, with English as the source locale and Nepali as the translation target
+- Wagtail's built-in internationalisation, with English as the source locale and Nepali as an independently written translation
 - A two-stage review model: clinical sign-off, and Nepali rewrite review, enforced by Wagtail workflows
 - Editor, Clinician and Nepali Reviewer groups, each holding the permissions it needs and nothing more
 - The Django contrib apps, middleware and context processors Wagtail requires, which P0 deliberately omitted
@@ -50,6 +50,7 @@ ContentEntryBase (abstract Page)
     clinically_reviewed_by / _at   written by the workflow, not by hand
     nepali_reviewed_by  / _at      written by the workflow, not by hand
     sources                        InlinePanel of Source (title, url, publisher, year)
+    translated_from_revision       FK to wagtailcore.Revision, null on source pages
     topics / conditions / symptoms / life_stages    M2M to snippets
 
 KnowledgeEntry(ContentEntryBase)   what the companion retrieves from
@@ -63,6 +64,16 @@ The v1 design requires that line on every health answer, including reassuring on
 ### Locale is not duplicated
 
 The v1 design's `lang` field is dropped. `Page.locale` already carries it, and holding both would let them disagree.
+
+### How the Nepali page relates to its English source
+
+Wagtail's own `locale` and `translation_key` link the two pages as translations of each other. `wagtail-localize` is deliberately **not** used.
+
+Its model is segment sync: the translated page is not edited as a page at all, but segment by segment in a translation editor, with sentence boundaries pinned to the English. That is the mechanism that makes translated Nepali read like translated Nepali, and avoiding exactly that register is why this design calls for a rewrite rather than a translation. Machine translation would not rescue it either — DeepL has no Nepali at all, and Google Translate's Nepali is weak.
+
+The one thing segment sync buys that is genuinely wanted is a staleness signal: *the English changed, someone should look at the Nepali.* That is obtained here with a single field. `translated_from_revision` records which revision of the English page the Nepali was last written against; when the source's latest published revision is newer, the Nepali page is flagged stale in the admin and excluded from any "reviewed" filter until it is revisited.
+
+So the Nepali page is an ordinary Wagtail page, written freely in a normal editor, linked to its source and aware of when that source has moved on.
 
 ### Graph vocabulary as snippets
 
@@ -78,9 +89,9 @@ The cost of that deferral, stated plainly: entries authored during P1 will be ta
 
 ### Locales
 
-`WAGTAIL_I18N_ENABLED = True` with `WAGTAIL_CONTENT_LANGUAGES = [("en", "English"), ("ne", "Nepali")]`, one page tree per locale, linked by `wagtail-localize`.
+`WAGTAIL_I18N_ENABLED = True` with `WAGTAIL_CONTENT_LANGUAGES = [("en", "English"), ("ne", "Nepali")]`, and one page tree per locale.
 
-Wagtail assigns a workflow to a page or a page subtree, not to a locale directly. `wagtail-localize` gives each locale its own root page, so "assigned per locale tree" means the workflow is attached to that locale's root and inherited by its descendants. If the implementation finds the locale roots do not exist as separate subtrees, that assumption is wrong and the assignment mechanism needs rethinking before proceeding.
+Wagtail assigns a workflow to a page or a page subtree, not to a locale directly. Translating the root page with `Page.copy_for_translation` gives each locale its own root, so "assigned per locale tree" means the workflow is attached to that locale's root and inherited by its descendants. If the implementation finds the locale roots do not exist as separate subtrees, that assumption is wrong and the assignment mechanism needs rethinking before proceeding.
 
 `LANGUAGE_CODE` moves from `"en-us"` to `"en"`. Wagtail requires it to match a declared content language, and `en-us` does not.
 
@@ -121,7 +132,7 @@ Workflow approval populates `clinically_reviewed_by/_at` and `nepali_reviewed_by
 
 ### What Wagtail requires that P0 omitted
 
-- `INSTALLED_APPS` gains `django.contrib.admin`, `django.contrib.sessions`, `django.contrib.messages`, the Wagtail apps, `modelcluster`, `taggit` and `wagtail_localize`
+- `INSTALLED_APPS` gains `django.contrib.admin`, `django.contrib.sessions`, `django.contrib.messages`, the Wagtail apps, `modelcluster` and `taggit`
 - `MIDDLEWARE` gains `SessionMiddleware`, `AuthenticationMiddleware`, `MessageMiddleware`, `CsrfViewMiddleware`, `LocaleMiddleware` and Wagtail's `RedirectMiddleware`
 - `TEMPLATES[0]["OPTIONS"]["context_processors"]` is currently empty and must gain the auth, messages and request processors, or the admin will not render
 - `MEDIA_ROOT`, `MEDIA_URL`, `DATA_UPLOAD_MAX_NUMBER_FIELDS = 10_000`, `WAGTAIL_SITE_NAME`, `WAGTAILADMIN_BASE_URL`
@@ -136,7 +147,7 @@ Wagtail 8 supports Django 5.2, 6.0 and 6.1, so the P0 pin of `django>=5.2,<6.0` 
 
 Wagtail 8's Python support could not be confirmed from the documentation. The project runs Python 3.13. **Verify before writing any models.** If Wagtail 8 requires a newer Python, the fork is to move Python or hold Wagtail at 7.x, and that decision belongs to the human.
 
-`wagtail-localize` is a second pin that must be chosen against the Wagtail version, not independently.
+No translation package is pinned, because none is used.
 
 ---
 
@@ -146,7 +157,8 @@ Wagtail 8's Python support could not be confirmed from the documentation. The pr
 - The committed `schema.yml` drift test is a free canary: Wagtail adds no DRF endpoints, so any change to that file means something touched the API surface.
 - Workflow: a page cannot publish until both of its gates approve; approval populates the reviewed-by fields.
 - Validation: an entry without `when_to_see_a_doctor` fails to save.
-- Locale: a Nepali translation is created, linked to its English source, and routed through the Nepali workflow rather than the English one.
+- Locale: a Nepali page is created from its English source, linked by `translation_key`, and routed through the Nepali workflow rather than the English one.
+- Staleness: publishing a new revision of an English page marks its Nepali translation stale, and the flag clears once the Nepali is rewritten against the newer revision.
 - Permissions: an Editor cannot publish; a Nepali reviewer cannot approve a clinical task.
 
 ---
@@ -156,5 +168,5 @@ Wagtail 8's Python support could not be confirmed from the documentation. The pr
 1. **The Wagtail admin is a new credentialed login surface on a product whose premise is anonymity.** It is staff-only and unrelated to devices, but it is a door that did not exist before. This slice serves it at `/cms/`, off the API path, and requires strong passwords. IP restriction or SSO is recorded as a pre-launch item rather than deferred silently.
 2. **Wagtail 8 on Python 3.13 is unverified**, as above. Checked before models are written.
 3. Wagtail brings a large initial migration set. The first `migrate` is slow, and CI's Postgres service will feel it.
-4. `wagtail-localize` compatibility is a second pin to get right.
+4. Staleness tracking is now ours to maintain rather than a package's. It is one field and one comparison, but a bug in it fails silently — a Nepali page that is quietly out of date reads as current. Its test is therefore not optional.
 5. The two-gate workflow doubles clinician load per entry. Measured during P1, not assumed.
