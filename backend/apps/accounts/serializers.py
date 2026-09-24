@@ -17,3 +17,8 @@ class EmailSignupSerializer(serializers.Serializer):
             # loudly than necessary.
             raise serializers.ValidationError("This email cannot be used.")
         return value
+
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)

@@ -7,6 +7,70 @@ info:
     it as X-Device-Token on every authenticated request. No personal identifier is
     required or accepted.'
 paths:
+  /api/auth/login/:
+    post:
+      operationId: login
+      description: Signs in by email and password, binding the calling device to the
+        matching account. An unknown email and a wrong password answer identically,
+        so the endpoint cannot be used to discover whether a given woman has an account
+        here.
+      summary: Bind the calling device to an account
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+        required: true
+      security:
+      - DeviceToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+          description: The calling device is now bound to this account.
+        '400':
+          description: Invalid email or password.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginError'
+          description: Email or password is incorrect.
+        '429':
+          description: Rate limit exceeded.
+  /api/auth/logout/:
+    post:
+      operationId: logout
+      description: 'Deletes the calling device entirely and returns a brand-new anonymous
+        device token. Not merely unbinding: on a shared phone, signing out must leave
+        an application with nothing in it, rather than a sign-in screen with her history
+        one tap behind it.'
+      summary: Destroy the calling device and issue a fresh anonymous one
+      tags:
+      - auth
+      security:
+      - DeviceToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+          description: The old device is gone; a fresh anonymous token is issued.
+        '401':
+          description: Missing or unknown device token.
+        '429':
+          description: Rate limit exceeded.
   /api/auth/signup/:
     post:
       operationId: signup
@@ -260,6 +324,46 @@ components:
         * `ne-Latn` - ne-Latn
         * `hi-Latn` - hi-Latn
         * `en` - en
+    LoginError:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - email
+      - password
+    LoginResponse:
+      type: object
+      properties:
+        account_id:
+          type: string
+          format: uuid
+      required:
+      - account_id
+    LogoutResponse:
+      type: object
+      properties:
+        device_token:
+          type: string
+        device_id:
+          type: string
+          format: uuid
+      required:
+      - device_id
+      - device_token
     SignupResponse:
       type: object
       properties:
