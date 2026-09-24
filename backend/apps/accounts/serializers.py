@@ -22,3 +22,19 @@ class EmailSignupSerializer(serializers.Serializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
+
+
+class UsernameSignupSerializer(serializers.Serializer):
+    username = serializers.RegexField(r"^[a-zA-Z0-9_.-]{3,32}$")
+    password = serializers.CharField(min_length=MIN_PASSWORD_LENGTH, write_only=True)
+
+    def validate_username(self, value: str) -> str:
+        if Identifier.lookup(Identifier.KIND_USERNAME, value) is not None:
+            raise serializers.ValidationError("This username cannot be used.")
+        return value
+
+
+class RecoverySerializer(serializers.Serializer):
+    username = serializers.CharField()
+    recovery_code = serializers.CharField()
+    new_password = serializers.CharField(min_length=MIN_PASSWORD_LENGTH, write_only=True)

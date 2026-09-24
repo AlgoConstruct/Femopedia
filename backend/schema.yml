@@ -71,12 +71,53 @@ paths:
           description: Missing or unknown device token.
         '429':
           description: Rate limit exceeded.
+  /api/auth/recover/:
+    post:
+      operationId: recover
+      description: 'Sets a new password using a recovery code, and issues a replacement
+        code -- the old one is spent, single-use. Deliberately AllowAny: a woman recovering
+        an account may be on a new device with no token yet, and requiring one would
+        strand exactly the person this endpoint exists for. Every failure -- unknown
+        username, wrong code, no code set -- answers identically, so the endpoint
+        cannot be used to discover which usernames exist.'
+      summary: Reset a password with a recovery code and issue a replacement
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecoveryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RecoveryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecoveryRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecoverResponse'
+          description: The password is reset; this is the replacement code.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecoverError'
+          description: Invalid payload, or the username and code do not match.
+        '429':
+          description: Rate limit exceeded.
   /api/auth/signup/:
     post:
       operationId: signup
       description: 'Signing up issues no new credential: the caller already holds
         a device token, and this gives that device an owner by setting its account.
-        A verification email is sent to the address afterward.'
+        An email signup sends a verification email afterward. A username signup has
+        no email to send to, so instead it returns a recovery code -- shown exactly
+        once, here, and never again.'
       summary: Create an account and bind the calling device to it
       tags:
       - auth
@@ -84,14 +125,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EmailSignupRequest'
+              $ref: '#/components/schemas/SignupRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/EmailSignupRequest'
+              $ref: '#/components/schemas/SignupRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/EmailSignupRequest'
-        required: true
+              $ref: '#/components/schemas/SignupRequest'
       security:
       - DeviceToken: []
       responses:
@@ -100,9 +140,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SignupResponse'
-          description: Account created and the calling device bound to it.
+          description: Account created and the calling device bound to it. recovery_code
+            is present only for a username signup.
         '400':
-          description: Invalid email or password.
+          description: Invalid payload, or neither an email nor a username.
         '401':
           description: Missing or unknown device token.
         '409':
@@ -364,14 +405,65 @@ components:
       required:
       - device_id
       - device_token
+    RecoverError:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    RecoverResponse:
+      type: object
+      properties:
+        recovery_code:
+          type: string
+      required:
+      - recovery_code
+    RecoveryRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+        recovery_code:
+          type: string
+          minLength: 1
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 10
+      required:
+      - new_password
+      - recovery_code
+      - username
+    SignupRequest:
+      oneOf:
+      - $ref: '#/components/schemas/EmailSignupRequest'
+      - $ref: '#/components/schemas/UsernameSignupRequest'
     SignupResponse:
       type: object
       properties:
         account_id:
           type: string
           format: uuid
+        recovery_code:
+          type: string
       required:
       - account_id
+    UsernameSignupRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          pattern: ^[a-zA-Z0-9_.-]{3,32}$
+        password:
+          type: string
+          writeOnly: true
+          minLength: 10
+      required:
+      - password
+      - username
     VerifyEmailError:
       type: object
       properties:

@@ -1,8 +1,15 @@
+import secrets
+
 from django.core.signing import BadSignature
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from django.views.decorators.debug import sensitive_variables
-from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    PolymorphicProxySerializer,
+    extend_schema,
+    inline_serializer,
+)
 from rest_framework import serializers, status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny
@@ -11,8 +18,18 @@ from rest_framework.throttling import ScopedRateThrottle
 
 from apps.accounts import verification
 from apps.accounts.models import Account, Device, Identifier
-from apps.accounts.serializers import EmailSignupSerializer, LoginSerializer
-from apps.accounts.tokens import generate_device_token, hash_device_token
+from apps.accounts.serializers import (
+    EmailSignupSerializer,
+    LoginSerializer,
+    RecoverySerializer,
+    UsernameSignupSerializer,
+)
+from apps.accounts.tokens import (
+    generate_device_token,
+    generate_recovery_code,
+    hash_device_token,
+    hash_recovery_code,
+)
 
 # Matches the shape DRF's default exception handler produces when
 # EmailSignupSerializer.validate_email raises its ValidationError. Used
@@ -29,18 +46,32 @@ DUPLICATE_EMAIL_ERROR = {"email": ["This email cannot be used."]}
     description=(
         "Signing up issues no new credential: the caller already holds a "
         "device token, and this gives that device an owner by setting its "
-        "account. A verification email is sent to the address afterward."
+        "account. An email signup sends a verification email afterward. A "
+        "username signup has no email to send to, so instead it returns a "
+        "recovery code -- shown exactly once, here, and never again."
     ),
-    request=EmailSignupSerializer,
+    request=PolymorphicProxySerializer(
+        component_name="Signup",
+        serializers=[EmailSignupSerializer, UsernameSignupSerializer],
+        resource_type_field_name=None,
+    ),
     responses={
         201: OpenApiResponse(
-            description="Account created and the calling device bound to it.",
+            description=(
+                "Account created and the calling device bound to it. "
+                "recovery_code is present only for a username signup."
+            ),
             response=inline_serializer(
                 name="SignupResponse",
-                fields={"account_id": serializers.UUIDField()},
+                fields={
+                    "account_id": serializers.UUIDField(),
+                    "recovery_code": serializers.CharField(required=False),
+                },
             ),
         ),
-        400: OpenApiResponse(description="Invalid email or password."),
+        400: OpenApiResponse(
+            description="Invalid payload, or neither an email nor a username."
+        ),
         401: OpenApiResponse(description="Missing or unknown device token."),
         409: OpenApiResponse(description="The calling device is already signed in."),
         429: OpenApiResponse(description="Rate limit exceeded."),
@@ -48,12 +79,14 @@ DUPLICATE_EMAIL_ERROR = {"email": ["This email cannot be used."]}
 )
 @api_view(["POST"])
 @throttle_classes([ScopedRateThrottle])
-@sensitive_variables("password")
+@sensitive_variables("password", "recovery_code")
 def signup(request):
     """Create an account and bind the calling device to it.
 
     The caller is already an anonymous device; signing up does not issue a new
-    credential, it gives the existing one an owner.
+    credential, it gives the existing one an owner. An email payload creates
+    an email-identified account; a username payload creates a contact-less
+    one with a recovery code instead -- there is no email to fall back on.
     """
     device = request.auth
     if device.account_id is not None:
@@ -62,18 +95,42 @@ def signup(request):
             status=status.HTTP_409_CONFLICT,
         )
 
-    serializer = EmailSignupSerializer(data=request.data)
+    payload = request.data if isinstance(request.data, dict) else {}
+    if "email" in payload:
+        serializer = EmailSignupSerializer(data=payload)
+    elif "username" in payload:
+        serializer = UsernameSignupSerializer(data=payload)
+    else:
+        return Response(
+            {"detail": "Provide either an email or a username."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     serializer.is_valid(raise_exception=True)
 
-    email = serializer.validated_data["email"]
     password = serializer.validated_data["password"]
+    recovery_code = None
 
     try:
         with transaction.atomic():
             account = Account()
             account.set_password(password)
+            if isinstance(serializer, UsernameSignupSerializer):
+                recovery_code = generate_recovery_code()
+                account.recovery_code_hash = hash_recovery_code(recovery_code)
             account.save()
-            identifier = Identifier.create_for(account, Identifier.KIND_EMAIL, email)
+
+            if isinstance(serializer, EmailSignupSerializer):
+                identifier = Identifier.create_for(
+                    account, Identifier.KIND_EMAIL, serializer.validated_data["email"]
+                )
+            else:
+                identifier = None
+                Identifier.create_for(
+                    account,
+                    Identifier.KIND_USERNAME,
+                    serializer.validated_data["username"],
+                )
+
             device.account = account
             device.bound_at = timezone.now()
             device.save(update_fields=["account", "bound_at"])
@@ -89,9 +146,13 @@ def signup(request):
     # Outside the transaction: a mail failure must not roll back an account
     # that was successfully created. She can re-request verification, but
     # she cannot re-create an account that vanished.
-    verification.send_verification_email(identifier)
+    if identifier is not None:
+        verification.send_verification_email(identifier)
 
-    return Response({"account_id": str(account.id)}, status=status.HTTP_201_CREATED)
+    body = {"account_id": str(account.id)}
+    if recovery_code is not None:
+        body["recovery_code"] = recovery_code
+    return Response(body, status=status.HTTP_201_CREATED)
 
 
 signup.cls.throttle_scope = "auth"
@@ -159,6 +220,85 @@ def verify_email(request):
 
 verify_email.cls.throttle_scope = "auth"
 
+RECOVERY_FAILURE = {"detail": "That username and recovery code do not match."}
+
+
+@extend_schema(
+    operation_id="recover",
+    summary="Reset a password with a recovery code and issue a replacement",
+    description=(
+        "Sets a new password using a recovery code, and issues a replacement "
+        "code -- the old one is spent, single-use. Deliberately AllowAny: a "
+        "woman recovering an account may be on a new device with no token "
+        "yet, and requiring one would strand exactly the person this "
+        "endpoint exists for. Every failure -- unknown username, wrong code, "
+        "no code set -- answers identically, so the endpoint cannot be used "
+        "to discover which usernames exist."
+    ),
+    auth=[],
+    request=RecoverySerializer,
+    responses={
+        200: OpenApiResponse(
+            description="The password is reset; this is the replacement code.",
+            response=inline_serializer(
+                name="RecoverResponse",
+                fields={"recovery_code": serializers.CharField()},
+            ),
+        ),
+        400: OpenApiResponse(
+            description="Invalid payload, or the username and code do not match.",
+            response=inline_serializer(
+                name="RecoverError", fields={"detail": serializers.CharField()}
+            ),
+        ),
+        429: OpenApiResponse(description="Rate limit exceeded."),
+    },
+)
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@throttle_classes([ScopedRateThrottle])
+@sensitive_variables("recovery_code", "new_password")
+def recover(request):
+    """Set a new password using a recovery code, and issue a replacement code.
+
+    AllowAny because a woman recovering an account may be on a new device
+    that has no token yet. Every failure answers identically, so the
+    endpoint cannot be used to discover which usernames exist.
+    """
+    serializer = RecoverySerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    failure = Response(RECOVERY_FAILURE, status=status.HTTP_400_BAD_REQUEST)
+
+    recovery_code = serializer.validated_data["recovery_code"]
+    new_password = serializer.validated_data["new_password"]
+
+    identifier = Identifier.lookup(
+        Identifier.KIND_USERNAME, serializer.validated_data["username"]
+    )
+    if identifier is None:
+        return failure
+
+    account = identifier.account
+    supplied = hash_recovery_code(recovery_code)
+    if not account.recovery_code_hash or not secrets.compare_digest(
+        supplied, account.recovery_code_hash
+    ):
+        return failure
+
+    replacement = generate_recovery_code()
+    account.set_password(new_password)
+    account.recovery_code_hash = hash_recovery_code(replacement)
+    account.recovery_code_used_at = timezone.now()
+    account.save(
+        update_fields=["password", "recovery_code_hash", "recovery_code_used_at"]
+    )
+
+    return Response({"recovery_code": replacement})
+
+
+recover.cls.throttle_scope = "auth"
+
 INVALID_CREDENTIALS = {"detail": "Email or password is incorrect."}
 
 
@@ -197,6 +337,8 @@ def login(request):
     serializer = LoginSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
+    password = serializer.validated_data["password"]
+
     identifier = Identifier.lookup(
         Identifier.KIND_EMAIL, serializer.validated_data["email"]
     )
@@ -204,9 +346,7 @@ def login(request):
 
     # One response for "no such account" and "wrong password", so the endpoint
     # cannot be used to discover whether a given woman has an account here.
-    if account is None or not account.check_password(
-        serializer.validated_data["password"]
-    ):
+    if account is None or not account.check_password(password):
         return Response(INVALID_CREDENTIALS, status=status.HTTP_401_UNAUTHORIZED)
 
     device = request.auth

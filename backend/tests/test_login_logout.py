@@ -1,8 +1,13 @@
-import pytest
-from django.test import Client
+import sys
+from unittest import mock
 
+import pytest
+from django.test import Client, RequestFactory, override_settings
+
+from apps.accounts import auth_views
 from apps.accounts.models import Account, Device, Identifier
 from apps.accounts.tokens import generate_device_token, hash_device_token
+from tests.test_sensitive_variables import _cleansed_locals_for_frame
 
 PASSWORD = "a-real-password"
 
@@ -90,6 +95,41 @@ def test_an_unknown_email_answers_exactly_like_a_wrong_password(account):
     # an account here.
     assert unknown.status_code == wrong.status_code == 401
     assert unknown.json() == wrong.json()
+
+
+@pytest.mark.django_db
+def test_login_cleanses_the_password_from_its_frame_locals(account):
+    """Modelled on test_signup_email.py's
+    test_signup_cleanses_the_password_from_its_frame_locals: force an
+    unhandled exception inside login and confirm the password local is
+    scrubbed from the traceback frame Django's error reporting would
+    otherwise mail out in cleartext. This also proves
+    @sensitive_variables("password") on login now scrubs something --
+    previously the decorator named a variable that was never bound to a
+    bare local, so it silently protected nothing."""
+    _device, raw = new_device()
+    request = RequestFactory().post(
+        "/api/auth/login/",
+        data={"email": "her@example.com", "password": PASSWORD},
+        content_type="application/json",
+        HTTP_X_DEVICE_TOKEN=raw,
+    )
+
+    with (
+        mock.patch(
+            "apps.accounts.auth_views.Identifier.lookup",
+            side_effect=RuntimeError("db exploded"),
+        ),
+        override_settings(DEBUG=False),
+    ):
+        try:
+            auth_views.login(request)
+        except RuntimeError:
+            cleansed = _cleansed_locals_for_frame("login", sys.exc_info()[2])
+        else:
+            raise AssertionError("login() was expected to raise when Identifier.lookup fails")
+
+    assert cleansed["password"] == "********************"
 
 
 @pytest.mark.django_db
