@@ -16,6 +16,8 @@ os.environ.setdefault(
     "DATABASE_URL", "postgres://femopedia:femopedia@localhost:5432/femopedia"
 )
 os.environ.setdefault("NEO4J_PASSWORD", "femopedia-dev-password")
+os.environ.setdefault("IDENTIFIER_PEPPER", "test-only-pepper-not-a-real-secret")
+os.environ.setdefault("FIELD_ENCRYPTION_KEY", "ZmVtb3BlZGlhLXRlc3Qta2V5LW5vdC1hLXNlY3JldCE=")
 
 
 @pytest.fixture(autouse=True)

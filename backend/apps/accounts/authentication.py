@@ -26,7 +26,16 @@ class DeviceTokenAuthentication(authentication.BaseAuthentication):
         except Device.DoesNotExist:
             raise exceptions.AuthenticationFailed("Unknown device token.")
 
-        Device.objects.filter(pk=device.pk).update(last_seen=timezone.now())
+        # An anonymous device has no owner to show a label to, so writing one
+        # is a plaintext handset fingerprint sitting on a row that used to
+        # hold only a hash and a locale -- the branch's one anonymity
+        # regression (finding I4 of the accounts-core fix wave). Only a
+        # device with an account records the User-Agent it authenticates
+        # with, so she can tell devices apart on her own session list.
+        update_fields = {"last_seen": timezone.now()}
+        if device.account_id is not None:
+            update_fields["label"] = (request.META.get("HTTP_USER_AGENT") or "")[:120]
+        Device.objects.filter(pk=device.pk).update(**update_fields)
         # request.auth carries the device explicitly, so callers do not need
         # to guess which authenticator populated request.user (see
         # apps.core.views.whoami and finding 10 of the P0 fix wave).
