@@ -1,4 +1,7 @@
+from unittest import mock
+
 import pytest
+from django.db import IntegrityError
 from django.test import Client
 
 from apps.accounts.models import Account, Device, Identifier
@@ -71,6 +74,32 @@ def test_signup_rejects_a_payload_with_neither_email_nor_username():
         headers={"x-device-token": raw},
     )
     assert response.status_code == 400
+    assert Account.objects.count() == 0
+
+
+@pytest.mark.django_db
+def test_signup_returns_the_vague_duplicate_username_error_on_a_database_race():
+    """Modelled on test_signup_email.py's
+    test_signup_returns_the_vague_duplicate_email_error_on_a_database_race:
+    two concurrent username signups can both pass
+    UsernameSignupSerializer.validate_username before either commits; the
+    loser must hit the database's unique constraint on (kind, value_hash)
+    and still read as an ordinary duplicate-username 400 -- not a 500, and
+    not the email-shaped error that names a field never in this request."""
+    _, raw = new_device()
+    with mock.patch(
+        "apps.accounts.auth_views.Identifier.create_for",
+        side_effect=IntegrityError("duplicate key value violates unique constraint"),
+    ):
+        response = Client().post(
+            "/api/auth/signup/",
+            data={"username": "sunita", "password": "a-real-password"},
+            content_type="application/json",
+            headers={"x-device-token": raw},
+        )
+
+    assert response.status_code == 400
+    assert response.json() == {"username": ["This username cannot be used."]}
     assert Account.objects.count() == 0
 
 

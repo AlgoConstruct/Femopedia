@@ -32,12 +32,14 @@ from apps.accounts.tokens import (
 )
 
 # Matches the shape DRF's default exception handler produces when
-# EmailSignupSerializer.validate_email raises its ValidationError. Used
-# again below for the race where two concurrent signups pass validation for
-# the same address and the loser hits the database's unique constraint
-# instead -- that caller must be indistinguishable from the ordinary
-# duplicate-email case, both in status code and in body.
+# EmailSignupSerializer.validate_email / UsernameSignupSerializer.validate_username
+# raises its ValidationError. Used again below for the race where two
+# concurrent signups pass validation for the same address or username and the
+# loser hits the database's unique constraint on (kind, value_hash) instead
+# -- that caller must be indistinguishable from the ordinary
+# duplicate-email/duplicate-username case, both in status code and in body.
 DUPLICATE_EMAIL_ERROR = {"email": ["This email cannot be used."]}
+DUPLICATE_USERNAME_ERROR = {"username": ["This username cannot be used."]}
 
 
 @extend_schema(
@@ -135,13 +137,20 @@ def signup(request):
             device.bound_at = timezone.now()
             device.save(update_fields=["account", "bound_at"])
     except IntegrityError:
-        # The serializer's own duplicate-email check already handles the
-        # common case; this is the loser of a race between two concurrent
-        # signups for the same address, caught by the database's unique
+        # The serializer's own duplicate check already handles the common
+        # case; this is the loser of a race between two concurrent signups
+        # for the same address or username, caught by the database's unique
         # constraint on (kind, value_hash) instead. Answer the same way the
-        # serializer would have, rather than letting an IntegrityError
-        # surface as a 500 or the vague-error wording get bypassed.
-        return Response(DUPLICATE_EMAIL_ERROR, status=status.HTTP_400_BAD_REQUEST)
+        # matching serializer would have -- an email collision must not come
+        # back naming "username", and vice versa -- rather than letting an
+        # IntegrityError surface as a 500 or the vague-error wording get
+        # bypassed.
+        error = (
+            DUPLICATE_EMAIL_ERROR
+            if isinstance(serializer, EmailSignupSerializer)
+            else DUPLICATE_USERNAME_ERROR
+        )
+        return Response(error, status=status.HTTP_400_BAD_REQUEST)
 
     # Outside the transaction: a mail failure must not roll back an account
     # that was successfully created. She can re-request verification, but
@@ -281,6 +290,11 @@ def recover(request):
 
     account = identifier.account
     supplied = hash_recovery_code(recovery_code)
+    # The `not account.recovery_code_hash` short-circuit is currently
+    # inconsequential -- every account reachable via a username identifier
+    # was given a recovery code at signup, so this is never empty here in
+    # practice. It would need revisiting if a code could ever be revoked
+    # without a replacement being issued.
     if not account.recovery_code_hash or not secrets.compare_digest(
         supplied, account.recovery_code_hash
     ):
