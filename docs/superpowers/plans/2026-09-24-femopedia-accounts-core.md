@@ -17,6 +17,7 @@
 - Secrets come from environment variables. Nothing secret is committed, including in `.env.example`.
 - New dependencies carry an upper version bound, per the drift lesson from P0.
 - Ruff must exit 0; every task ends with a commit on the working branch.
+- **Every new `@api_view` needs an `@extend_schema`** declaring its request and responses. `schema.yml` is regenerated with `--fail-on-warn`, so a view drf-spectacular cannot introspect fails the build, and the committed schema is guarded by a drift test. Follow the pattern already used in `apps/core/views.py` and `apps/accounts/views.py`. The per-task code blocks below omit these decorators; add them.
 
 ## Deferred from the spec, deliberately
 
