@@ -27,7 +27,10 @@ class DeviceTokenAuthentication(authentication.BaseAuthentication):
             raise exceptions.AuthenticationFailed("Unknown device token.")
 
         Device.objects.filter(pk=device.pk).update(last_seen=timezone.now())
-        return (device, None)
+        # request.auth carries the device explicitly, so callers do not need
+        # to guess which authenticator populated request.user (see
+        # apps.core.views.whoami and finding 10 of the P0 fix wave).
+        return (device, device)
 
     def authenticate_header(self, request):
         return "X-Device-Token"

@@ -1,6 +1,7 @@
 import pytest
-from django.test import Client
+from django.test import Client, RequestFactory
 
+from apps.accounts.authentication import DeviceTokenAuthentication
 from apps.accounts.models import Device
 from apps.accounts.tokens import generate_device_token, hash_device_token
 
@@ -39,3 +40,19 @@ def test_authentication_updates_last_seen(device_with_token):
     Client().get("/api/whoami/", headers={"x-device-token": raw})
     device.refresh_from_db()
     assert device.last_seen > before
+
+
+@pytest.mark.django_db
+def test_authenticate_returns_the_device_as_both_user_and_auth(device_with_token):
+    """request.auth must carry the Device explicitly (see the plan's P0 fix
+    wave, finding 10): request.user becomes polymorphic once P1.5 adds
+    Wagtail staff sessions, so callers need an attribute that unambiguously
+    identifies a device regardless of what authenticated the request.
+    """
+    device, raw = device_with_token
+    request = RequestFactory().get("/api/whoami/", HTTP_X_DEVICE_TOKEN=raw)
+
+    user, auth = DeviceTokenAuthentication().authenticate(request)
+
+    assert user == device
+    assert auth == device

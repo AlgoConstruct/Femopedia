@@ -14,7 +14,10 @@ def health(request):
 
 @api_view(["GET"])
 def whoami(request):
-    return Response({"device_id": str(request.user.id)})
+    # request.user is polymorphic once Wagtail staff sessions arrive (P1.5),
+    # so this reads request.auth, which DeviceTokenAuthentication populates
+    # explicitly with the Device regardless of what request.user ends up being.
+    return Response({"device_id": str(request.auth.id)})
 
 
 @api_view(["GET"])
