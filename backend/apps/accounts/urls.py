@@ -1,6 +1,6 @@
 from django.urls import path
 
-from apps.accounts import auth_views, session_views, views
+from apps.accounts import account_views, auth_views, session_views, views
 
 urlpatterns = [
     path("devices/", views.create_device, name="create-device"),
@@ -16,4 +16,11 @@ urlpatterns = [
         name="auth-password-reset-confirm",
     ),
     path("account/password/", auth_views.password_change, name="account-password"),
+    path("account/", account_views.account_summary, name="account-summary"),
+    path("account/devices/", account_views.device_list, name="account-devices"),
+    path(
+        "account/devices/<uuid:device_id>/",
+        account_views.device_revoke,
+        name="account-device-revoke",
+    ),
 ]

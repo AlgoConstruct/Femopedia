@@ -7,6 +7,89 @@ info:
     it as X-Device-Token on every authenticated request. No personal identifier is
     required or accepted.'
 paths:
+  /api/account/:
+    get:
+      operationId: accountSummary
+      description: Returns the account id, creation time, and the kind and verification
+        status of each identifier on the account. Identifier values are encrypted
+        at rest and are never returned here.
+      summary: Summarize the calling account
+      tags:
+      - account
+      security:
+      - DeviceToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountSummaryResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountForbidden'
+          description: This device is not signed in.
+  /api/account/devices/:
+    get:
+      operationId: accountDevices
+      description: Returns every device signed in to this account, so she can recognize
+        a phone she no longer has, or one someone else now uses. The device token
+        hash is never included.
+      summary: List every device bound to the calling account
+      tags:
+      - account
+      security:
+      - DeviceToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountDeviceListResponse'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountForbidden'
+          description: This device is not signed in.
+  /api/account/devices/{device_id}/:
+    delete:
+      operationId: accountDeviceRevoke
+      description: 'Deletes a device belonging to the calling account, dropping a
+        phone she no longer has or one someone else now uses. A device id that belongs
+        to another account is indistinguishable from one that does not exist: both
+        answer 404, never 403, so this cannot be used to confirm who owns a given
+        device.'
+      summary: Revoke a device bound to the calling account
+      parameters:
+      - in: path
+        name: device_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - account
+      security:
+      - DeviceToken: []
+      responses:
+        '204':
+          description: The device is gone.
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountForbidden'
+          description: This device is not signed in.
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountDeviceNotFound'
+          description: No such device on this account.
   /api/account/password/:
     post:
       operationId: passwordChange
@@ -392,6 +475,79 @@ paths:
           description: Missing or unknown device token.
 components:
   schemas:
+    AccountDevice:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        last_seen:
+          type: string
+          format: date-time
+        bound_at:
+          type: string
+          format: date-time
+          nullable: true
+        is_current:
+          type: boolean
+      required:
+      - bound_at
+      - id
+      - is_current
+      - label
+      - last_seen
+    AccountDeviceListResponse:
+      type: object
+      properties:
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccountDevice'
+      required:
+      - devices
+    AccountDeviceNotFound:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    AccountForbidden:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    AccountIdentifierSummary:
+      type: object
+      properties:
+        kind:
+          type: string
+        verified:
+          type: boolean
+      required:
+      - kind
+      - verified
+    AccountSummaryResponse:
+      type: object
+      properties:
+        account_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        identifiers:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccountIdentifierSummary'
+      required:
+      - account_id
+      - created_at
+      - identifiers
     CreateDeviceRequestRequest:
       type: object
       properties:

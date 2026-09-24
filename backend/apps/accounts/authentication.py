@@ -26,7 +26,10 @@ class DeviceTokenAuthentication(authentication.BaseAuthentication):
         except Device.DoesNotExist:
             raise exceptions.AuthenticationFailed("Unknown device token.")
 
-        Device.objects.filter(pk=device.pk).update(last_seen=timezone.now())
+        label = (request.META.get("HTTP_USER_AGENT") or "")[:120]
+        Device.objects.filter(pk=device.pk).update(
+            last_seen=timezone.now(), label=label
+        )
         # request.auth carries the device explicitly, so callers do not need
         # to guess which authenticator populated request.user (see
         # apps.core.views.whoami and finding 10 of the P0 fix wave).
