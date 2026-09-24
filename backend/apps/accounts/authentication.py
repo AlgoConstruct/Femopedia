@@ -1,4 +1,5 @@
 from django.utils import timezone
+from django.views.decorators.debug import sensitive_variables
 from rest_framework import authentication, exceptions
 
 from apps.accounts.models import Device
@@ -14,6 +15,7 @@ class DeviceTokenAuthentication(authentication.BaseAuthentication):
     compared here, so a database leak does not yield usable credentials.
     """
 
+    @sensitive_variables("raw_token")
     def authenticate(self, request):
         raw_token = request.META.get(HEADER)
         if not raw_token:
