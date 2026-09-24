@@ -1,0 +1,63 @@
+name: backend
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: femopedia
+          POSTGRES_PASSWORD: femopedia
+          POSTGRES_DB: femopedia
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U femopedia"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    # DJANGO_SECRET_KEY, DATABASE_URL and NEO4J_PASSWORD below are only set
+    # here so that a step running Django outside pytest (e.g. manage.py, a
+    # migration check) sees them. Inside the pytest step, pyproject.toml's
+    # [tool.pytest.ini_options] env list carries its own "D:"-prefixed
+    # (set-only-if-undefined) defaults for the same variables, so whichever
+    # of the two actually reaches pytest-env first wins and the two are
+    # kept in sync deliberately. conftest.py documents the equivalent for
+    # its own inert fallback values.
+    env:
+      DJANGO_SECRET_KEY: ci-only-not-a-real-secret
+      DJANGO_DEBUG: "True"
+      DATABASE_URL: postgres://femopedia:femopedia@localhost:5432/femopedia
+      REDIS_URL: redis://localhost:6379/0
+      NEO4J_PASSWORD: ci-placeholder
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run pytest -v -m "not integration"
+      # Build only: proves the Dockerfile still produces an image (the CMD
+      # itself is not exercised by a build, only by running the container).
+      # No push, no registry.
+      - run: docker build -t femopedia-backend:ci .
