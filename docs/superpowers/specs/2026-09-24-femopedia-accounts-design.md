@@ -118,6 +118,14 @@ The cost, stated plainly: OAuth libraries such as `django-allauth` assume Django
 
 Step 4's ordering is the duplicate-account fix, and the verification requirement on both sides is what stops an attacker claiming an account by registering someone else's address without proving it.
 
+### Recovery of a forgotten password
+
+For an email account: `POST /api/auth/password-reset/` with the address sends a signed, single-use, time-limited link. The response is identical whether or not the address exists, because a differing response turns the endpoint into an oracle for whether a given woman has an account here.
+
+For a contact-less account: `POST /api/auth/recover/` with `{username, recovery_code}` permits one password change. The code is single-use; completing the flow issues a replacement, returned once, with the same acknowledgement requirement as at signup.
+
+An OAuth-only account has no password to reset. Signing in with the provider again is the recovery path, which is one of the things the provider is doing for her.
+
 ### Login, logout, revocation
 
 Login binds this device to the account, and is throttled under its own scope — it is the one endpoint where password guessing is possible.
@@ -143,6 +151,8 @@ In this slice the dashboard is an **account and privacy home**: who you are, whi
 **Export** returns the file directly in the response rather than writing it to disk and mailing a link: account, identifiers with the email decrypted, devices, conversations, messages, feedback. No stored artefact means no export file waiting in a bucket to leak, and no link sitting in an inbox someone else may read.
 
 **Delete** requires re-authentication, then hard-cascades across account, identifiers, devices, conversations, messages and feedback.
+
+Re-authentication means, by account type: the current password for an email or contact-less account; a fresh provider sign-in for an OAuth-only account. A valid device token alone is never sufficient — the whole point is that the person holding the unlocked phone may not be her.
 
 ### The tension in deletion, stated rather than buried
 
