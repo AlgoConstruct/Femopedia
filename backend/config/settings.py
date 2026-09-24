@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.staticfiles",
     "rest_framework",
+    "drf_spectacular",
     "apps.core",
     "apps.accounts",
 ]
@@ -74,6 +75,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     "UNAUTHENTICATED_USER": None,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.ScopedRateThrottle",
@@ -86,4 +88,24 @@ REST_FRAMEWORK = {
         "anon": "60/hour",
         "device-create": "10/hour",
     },
+}
+
+# Gate for the OpenAPI schema and its browsable UI. A schema enumerates the
+# whole API surface, so it is not served publicly: access requires DEBUG, or
+# this token in an X-Docs-Token header. Empty (the default) disables the
+# token path entirely, so production serves the schema to nobody by default.
+DOCS_TOKEN = env("DOCS_TOKEN", default="")
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Femopedia API",
+    "DESCRIPTION": (
+        "Anonymous AI health companion. The only credential is a device token: "
+        "call POST /api/devices/ once, keep the returned token on the device, "
+        "and send it as X-Device-Token on every authenticated request. No "
+        "personal identifier is required or accepted."
+    ),
+    "VERSION": "0.1.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SORT_OPERATIONS": True,
 }
