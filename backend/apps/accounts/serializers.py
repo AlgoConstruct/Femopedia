@@ -38,3 +38,17 @@ class RecoverySerializer(serializers.Serializer):
     username = serializers.CharField()
     recovery_code = serializers.CharField()
     new_password = serializers.CharField(min_length=MIN_PASSWORD_LENGTH, write_only=True)
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    new_password = serializers.CharField(min_length=MIN_PASSWORD_LENGTH, write_only=True)
+
+
+class PasswordChangeSerializer(serializers.Serializer):
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(min_length=MIN_PASSWORD_LENGTH, write_only=True)

@@ -7,6 +7,45 @@ info:
     it as X-Device-Token on every authenticated request. No personal identifier is
     required or accepted.'
 paths:
+  /api/account/password/:
+    post:
+      operationId: passwordChange
+      description: Requires the current password. The calling device must be signed
+        in -- an anonymous device has no account to change the password of.
+      summary: Change the signed-in account's password
+      tags:
+      - account
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordChangeRequest'
+        required: true
+      security:
+      - DeviceToken: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordChangeResponse'
+          description: The password is changed.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordChangeError'
+          description: Invalid payload, or the current password is wrong.
+        '403':
+          description: The calling device is not signed in.
+        '429':
+          description: Rate limit exceeded.
   /api/auth/login/:
     post:
       operationId: login
@@ -69,6 +108,78 @@ paths:
           description: The old device is gone; a fresh anonymous token is issued.
         '401':
           description: Missing or unknown device token.
+        '429':
+          description: Rate limit exceeded.
+  /api/auth/password-reset/:
+    post:
+      operationId: passwordReset
+      description: 'Always answers 202, whatever happens -- known address, unverified
+        address, or no such address at all. Any difference between ''sent'' and ''no
+        such address'' would turn this unauthenticated endpoint into a way to ask
+        whether a given woman has an account here. Mail goes out only when the address
+        exists and is verified: an unverified address may belong to someone else entirely.'
+      summary: Request a password reset email
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequestRequest'
+        required: true
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetResponse'
+          description: Always returned, regardless of whether mail was sent.
+        '400':
+          description: Invalid payload.
+        '429':
+          description: Rate limit exceeded.
+  /api/auth/password-reset/confirm/:
+    post:
+      operationId: passwordResetConfirm
+      description: 'Consumes the token from the link sent by password_reset. The token
+        signs a fingerprint of the current password hash, so setting a new password
+        immediately invalidates every token issued before it -- a used or superseded
+        link cannot be replayed. Deliberately AllowAny: she may be opening the link
+        on a device that has never used the application.'
+      summary: Choose a new password from a reset link
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetConfirmRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetConfirmResponse'
+          description: The password is changed.
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetConfirmError'
+          description: The token is invalid, expired, or already used.
         '429':
           description: Rate limit exceeded.
   /api/auth/recover/:
@@ -405,6 +516,77 @@ components:
       required:
       - device_id
       - device_token
+    PasswordChangeError:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    PasswordChangeRequest:
+      type: object
+      properties:
+        current_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 10
+      required:
+      - current_password
+      - new_password
+    PasswordChangeResponse:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+      - status
+    PasswordResetConfirmError:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    PasswordResetConfirmRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 10
+      required:
+      - new_password
+      - token
+    PasswordResetConfirmResponse:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+      - status
+    PasswordResetRequestRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+      required:
+      - email
+    PasswordResetResponse:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+      - status
     RecoverError:
       type: object
       properties:

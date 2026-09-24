@@ -129,3 +129,6 @@ DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="noreply@femopedia.local"
 ACCOUNT_VERIFICATION_URL = env(
     "ACCOUNT_VERIFICATION_URL", default="http://localhost:3000/verify-email"
 )
+ACCOUNT_PASSWORD_RESET_URL = env(
+    "ACCOUNT_PASSWORD_RESET_URL", default="http://localhost:3000/reset-password"
+)

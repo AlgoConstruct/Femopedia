@@ -1,4 +1,5 @@
 import secrets
+from hashlib import sha256
 
 from django.core.signing import BadSignature
 from django.db import IntegrityError, transaction
@@ -20,6 +21,9 @@ from apps.accounts import verification
 from apps.accounts.models import Account, Identifier
 from apps.accounts.serializers import (
     EmailSignupSerializer,
+    PasswordChangeSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordResetRequestSerializer,
     RecoverySerializer,
     UsernameSignupSerializer,
 )
@@ -306,3 +310,180 @@ def recover(request):
 
 
 recover.cls.throttle_scope = "auth"
+
+
+@extend_schema(
+    operation_id="passwordReset",
+    summary="Request a password reset email",
+    description=(
+        "Always answers 202, whatever happens -- known address, unverified "
+        "address, or no such address at all. Any difference between "
+        "'sent' and 'no such address' would turn this unauthenticated "
+        "endpoint into a way to ask whether a given woman has an account "
+        "here. Mail goes out only when the address exists and is verified: "
+        "an unverified address may belong to someone else entirely."
+    ),
+    auth=[],
+    request=PasswordResetRequestSerializer,
+    responses={
+        202: OpenApiResponse(
+            description="Always returned, regardless of whether mail was sent.",
+            response=inline_serializer(
+                name="PasswordResetResponse", fields={"status": serializers.CharField()}
+            ),
+        ),
+        400: OpenApiResponse(description="Invalid payload."),
+        429: OpenApiResponse(description="Rate limit exceeded."),
+    },
+)
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@throttle_classes([ScopedRateThrottle])
+@sensitive_variables()
+def password_reset(request):
+    """Always answer 202, whatever happens.
+
+    Any difference between "sent" and "no such address" turns this endpoint
+    into a way to ask whether a given woman has an account here.
+    """
+    serializer = PasswordResetRequestSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    identifier = Identifier.lookup(
+        Identifier.KIND_EMAIL, serializer.validated_data["email"]
+    )
+    if identifier is not None and identifier.is_verified:
+        verification.send_password_reset_email(identifier)
+
+    return Response({"status": "sent"}, status=status.HTTP_202_ACCEPTED)
+
+
+password_reset.cls.throttle_scope = "auth"
+
+
+@extend_schema(
+    operation_id="passwordResetConfirm",
+    summary="Choose a new password from a reset link",
+    description=(
+        "Consumes the token from the link sent by password_reset. The token "
+        "signs a fingerprint of the current password hash, so setting a new "
+        "password immediately invalidates every token issued before it -- a "
+        "used or superseded link cannot be replayed. Deliberately AllowAny: "
+        "she may be opening the link on a device that has never used the "
+        "application."
+    ),
+    auth=[],
+    request=PasswordResetConfirmSerializer,
+    responses={
+        200: OpenApiResponse(
+            description="The password is changed.",
+            response=inline_serializer(
+                name="PasswordResetConfirmResponse", fields={"status": serializers.CharField()}
+            ),
+        ),
+        400: OpenApiResponse(
+            description="The token is invalid, expired, or already used.",
+            response=inline_serializer(
+                name="PasswordResetConfirmError", fields={"detail": serializers.CharField()}
+            ),
+        ),
+        429: OpenApiResponse(description="Rate limit exceeded."),
+    },
+)
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@throttle_classes([ScopedRateThrottle])
+@sensitive_variables("new_password")
+def password_reset_confirm(request):
+    """Consume a reset token and set the new password.
+
+    The token signs a fingerprint of the current password hash, so setting a
+    new password invalidates every token issued before it -- a used link
+    cannot be replayed.
+    """
+    serializer = PasswordResetConfirmSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    new_password = serializer.validated_data["new_password"]
+
+    failure = Response(
+        {"detail": "This link is invalid or has expired."},
+        status=status.HTTP_400_BAD_REQUEST,
+    )
+
+    try:
+        account_id, fingerprint = verification.read_reset_token(
+            serializer.validated_data["token"]
+        )
+    except BadSignature:
+        return failure
+
+    account = Account.objects.filter(id=account_id).first()
+    if account is None:
+        return failure
+    if sha256(account.password.encode("utf-8")).hexdigest()[:16] != fingerprint:
+        return failure
+
+    account.set_password(new_password)
+    account.save(update_fields=["password"])
+    return Response({"status": "changed"})
+
+
+password_reset_confirm.cls.throttle_scope = "auth"
+
+
+@extend_schema(
+    operation_id="passwordChange",
+    summary="Change the signed-in account's password",
+    description=(
+        "Requires the current password. The calling device must be signed "
+        "in -- an anonymous device has no account to change the password of."
+    ),
+    request=PasswordChangeSerializer,
+    responses={
+        200: OpenApiResponse(
+            description="The password is changed.",
+            response=inline_serializer(
+                name="PasswordChangeResponse", fields={"status": serializers.CharField()}
+            ),
+        ),
+        400: OpenApiResponse(
+            description="Invalid payload, or the current password is wrong.",
+            response=inline_serializer(
+                name="PasswordChangeError", fields={"detail": serializers.CharField()}
+            ),
+        ),
+        403: OpenApiResponse(description="The calling device is not signed in."),
+        429: OpenApiResponse(description="Rate limit exceeded."),
+    },
+)
+@api_view(["POST"])
+@throttle_classes([ScopedRateThrottle])
+@sensitive_variables("current_password", "new_password")
+def password_change(request):
+    """Change the signed-in account's password, given the current one."""
+    account = request.auth.account
+    if account is None:
+        return Response(
+            {"detail": "This device is not signed in."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    serializer = PasswordChangeSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+
+    current_password = serializer.validated_data["current_password"]
+    new_password = serializer.validated_data["new_password"]
+
+    if not account.check_password(current_password):
+        return Response(
+            {"detail": "Current password is incorrect."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    account.set_password(new_password)
+    account.save(update_fields=["password"])
+    return Response({"status": "changed"})
+
+
+password_change.cls.throttle_scope = "auth"

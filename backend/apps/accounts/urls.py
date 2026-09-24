@@ -9,4 +9,11 @@ urlpatterns = [
     path("auth/recover/", auth_views.recover, name="auth-recover"),
     path("auth/login/", session_views.login, name="auth-login"),
     path("auth/logout/", session_views.logout, name="auth-logout"),
+    path("auth/password-reset/", auth_views.password_reset, name="auth-password-reset"),
+    path(
+        "auth/password-reset/confirm/",
+        auth_views.password_reset_confirm,
+        name="auth-password-reset-confirm",
+    ),
+    path("account/password/", auth_views.password_change, name="account-password"),
 ]
