@@ -87,6 +87,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": "60/hour",
         "device-create": "10/hour",
+        "auth": "20/hour",
     },
 }
 

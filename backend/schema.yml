@@ -7,6 +7,44 @@ info:
     it as X-Device-Token on every authenticated request. No personal identifier is
     required or accepted.'
 paths:
+  /api/auth/signup/:
+    post:
+      operationId: signup
+      description: 'Signing up issues no new credential: the caller already holds
+        a device token, and this gives that device an owner by setting its account.
+        No verification email is sent by this endpoint.'
+      summary: Create an account and bind the calling device to it
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailSignupRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailSignupRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmailSignupRequest'
+        required: true
+      security:
+      - DeviceToken: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignupResponse'
+          description: Account created and the calling device bound to it.
+        '400':
+          description: Invalid email or password.
+        '401':
+          description: Missing or unknown device token.
+        '409':
+          description: The calling device is already signed in.
+        '429':
+          description: Rate limit exceeded.
   /api/devices/:
     post:
       operationId: createDevice
@@ -120,6 +158,20 @@ components:
       required:
       - device_id
       - device_token
+    EmailSignupRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 10
+      required:
+      - email
+      - password
     ErrorDetail:
       type: object
       properties:
@@ -172,6 +224,14 @@ components:
         * `ne-Latn` - ne-Latn
         * `hi-Latn` - hi-Latn
         * `en` - en
+    SignupResponse:
+      type: object
+      properties:
+        account_id:
+          type: string
+          format: uuid
+      required:
+      - account_id
     WhoamiResponse:
       type: object
       properties:
