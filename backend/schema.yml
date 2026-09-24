@@ -96,11 +96,10 @@ paths:
   /api/account/devices/{device_id}/:
     delete:
       operationId: accountDeviceRevoke
-      description: 'Deletes a device belonging to the calling account, dropping a
-        phone she no longer has or one someone else now uses. A device id that belongs
-        to another account is indistinguishable from one that does not exist: both
-        answer 404, never 403, so this cannot be used to confirm who owns a given
-        device.'
+      description: |-
+        Deletes a device belonging to the calling account, dropping a phone she no longer has or one someone else now uses. A device id that belongs to another account is indistinguishable from one that does not exist: both answer 404, never 403, so this cannot be used to confirm who owns a given device.
+
+        Revoking the device making this very call would otherwise leave the client holding a dead token with no way back in -- worse than logout, which never does that. So that one case answers 200 with a fresh anonymous device_token/device_id, exactly as logout does, instead of 204.
       summary: Revoke a device bound to the calling account
       parameters:
       - in: path
@@ -114,6 +113,13 @@ paths:
       security:
       - DeviceToken: []
       responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountDeviceRevokeSelfResponse'
+          description: The caller revoked the device it was calling from. It is gone;
+            this is a fresh anonymous device token in its place.
         '204':
           description: The device is gone.
         '403':
@@ -153,7 +159,10 @@ paths:
     post:
       operationId: passwordChange
       description: Requires the current password. The calling device must be signed
-        in -- an anonymous device has no account to change the password of.
+        in -- an anonymous device has no account to change the password of. She reaches
+        for this because she believes someone else has access, so a successful change
+        also revokes every other device bound to the account (I3 of the accounts-core
+        fix wave), the same way password reset and recovery do.
       summary: Change the signed-in account's password
       tags:
       - account
@@ -177,7 +186,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PasswordChangeResponse'
-          description: The password is changed.
+          description: The password is changed; every other device is revoked.
         '400':
           content:
             application/json:
@@ -191,10 +200,10 @@ paths:
   /api/auth/login/:
     post:
       operationId: login
-      description: Signs in by email and password, binding the calling device to the
-        matching account. An unknown email and a wrong password answer identically,
-        so the endpoint cannot be used to discover whether a given woman has an account
-        here.
+      description: |-
+        Signs in by email and password, binding the calling device to the matching account. An unknown email and a wrong password answer identically, so the endpoint cannot be used to discover whether a given woman has an account here.
+
+        If the calling device is already signed in -- to this account or to a different one -- this is a logout-then-login, exactly like POST /api/auth/logout/ followed by a fresh sign-in: the old device row is deleted and a brand-new one is created, bound to the account just authenticated, and its token is returned as device_token/device_id alongside account_id. Nothing is silently transferred between accounts. This matters because two women sharing a handset is a central scenario: logging in as one must never quietly attach her history to whoever was signed in before her.
       summary: Bind the calling device to an account
       tags:
       - auth
@@ -218,7 +227,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LoginResponse'
-          description: The calling device is now bound to this account.
+          description: The calling device is now bound to this account. device_token
+            and device_id are present only when the calling device was already signed
+            in and had to be replaced (see the rebind note above).
         '400':
           description: Invalid email or password.
         '401':
@@ -255,11 +266,10 @@ paths:
   /api/auth/password-reset/:
     post:
       operationId: passwordReset
-      description: 'Always answers 202, whatever happens -- known address, unverified
-        address, or no such address at all. Any difference between ''sent'' and ''no
-        such address'' would turn this unauthenticated endpoint into a way to ask
-        whether a given woman has an account here. Mail goes out only when the address
-        exists and is verified: an unverified address may belong to someone else entirely.'
+      description: |-
+        Always answers 202, whatever happens -- known address, unverified address, no such address, or a mail-sending failure. Any difference between 'sent' and 'no such address' would turn this unauthenticated endpoint into a way to ask whether a given woman has an account here. Mail goes out only when the address exists and is verified: an unverified address may belong to someone else entirely.
+
+        Residual timing note: the email is sent synchronously within this request (this project has no task queue), so a known-and-verified address still measurably takes longer to answer than an unknown or unverified one -- the SMTP round trip dominates. That gap is a real, currently open timing oracle; equal response bodies and status codes do not close it, and nothing short of moving the send off the request path (a queue) will.
       summary: Request a password reset email
       tags:
       - auth
@@ -589,6 +599,17 @@ components:
           type: string
       required:
       - detail
+    AccountDeviceRevokeSelfResponse:
+      type: object
+      properties:
+        device_token:
+          type: string
+        device_id:
+          type: string
+          format: uuid
+      required:
+      - device_id
+      - device_token
     AccountForbidden:
       type: object
       properties:
@@ -732,6 +753,11 @@ components:
       type: object
       properties:
         account_id:
+          type: string
+          format: uuid
+        device_token:
+          type: string
+        device_id:
           type: string
           format: uuid
       required:
