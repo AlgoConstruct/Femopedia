@@ -11,8 +11,15 @@ Anonymous, language-matched AI health companion for women in Nepal and South Asi
 
 ## Running locally
 
+    cp .env.example .env
     docker compose up -d
-    cd backend && uv run python manage.py migrate
-    cd backend && uv run python manage.py runserver
+
+    cd backend
+    cp .env.example .env
+    uv run python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+    # paste the generated value into backend/.env as DJANGO_SECRET_KEY
+
+    uv run python manage.py migrate
+    uv run python manage.py runserver
 
 See `docs/superpowers/specs/` for the design this implements.
