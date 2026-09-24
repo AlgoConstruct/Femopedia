@@ -1,8 +1,14 @@
-import pytest
-from django.test import Client
+import sys
+from unittest import mock
 
+import pytest
+from django.db import IntegrityError
+from django.test import Client, RequestFactory, override_settings
+
+from apps.accounts import auth_views
 from apps.accounts.models import Account, Device, Identifier
 from apps.accounts.tokens import generate_device_token, hash_device_token
+from tests.test_sensitive_variables import _cleansed_locals_for_frame
 
 
 @pytest.fixture
@@ -123,3 +129,60 @@ def test_a_device_already_bound_cannot_sign_up_again(device):
     )
     assert response.status_code == 409
     assert Account.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_signup_cleanses_the_password_from_its_frame_locals(device):
+    """Modelled on tests/test_sensitive_variables.py's coverage of the
+    analogous secret (the raw device token) in create_device and
+    DeviceTokenAuthentication.authenticate: force an unhandled exception
+    inside signup and confirm the password local is scrubbed from the
+    traceback frame Django's error reporting would otherwise mail out in
+    cleartext."""
+    _, raw = device
+    request = RequestFactory().post(
+        "/api/auth/signup/",
+        data={"email": "her@example.com", "password": "a-real-password"},
+        content_type="application/json",
+        HTTP_X_DEVICE_TOKEN=raw,
+    )
+
+    with (
+        mock.patch(
+            "apps.accounts.auth_views.Account.save",
+            side_effect=RuntimeError("db exploded"),
+        ),
+        override_settings(DEBUG=False),
+    ):
+        try:
+            auth_views.signup(request)
+        except RuntimeError:
+            cleansed = _cleansed_locals_for_frame("signup", sys.exc_info()[2])
+        else:
+            raise AssertionError("signup() was expected to raise when Account.save fails")
+
+    assert cleansed["password"] == "********************"
+
+
+@pytest.mark.django_db
+def test_signup_returns_the_vague_duplicate_email_error_on_a_database_race(device):
+    """Two concurrent signups for the same address can both pass the
+    serializer's own duplicate-email check before either commits; the loser
+    must hit the database's unique constraint on (kind, value_hash) and
+    still read as an ordinary duplicate-email 400 -- not a 500, and not a
+    louder error than the vague one the serializer already uses."""
+    _, raw = device
+    with mock.patch(
+        "apps.accounts.auth_views.Identifier.create_for",
+        side_effect=IntegrityError("duplicate key value violates unique constraint"),
+    ):
+        response = Client().post(
+            "/api/auth/signup/",
+            data={"email": "her@example.com", "password": "a-real-password"},
+            content_type="application/json",
+            headers={"x-device-token": raw},
+        )
+
+    assert response.status_code == 400
+    assert response.json() == {"email": ["This email cannot be used."]}
+    assert Account.objects.count() == 0
